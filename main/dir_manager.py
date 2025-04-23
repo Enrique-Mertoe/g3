@@ -98,6 +98,18 @@ class VPNManager:
             return False
 
         ersa = cls.get("server", "easy-rsa")
+        if not ersa.exists():
+            raise PathError
+        os.chdir(ersa)
+        subprocess.run([
+            "./easyrsa",
+            "--batch",
+            "--days=3650",
+            "build-client-full",
+            sanitized_client,
+            "nopass"
+        ], check=True)
+
         common = cls.get("server", "client-common.txt")
         ca = cls.get("server", "easy-rsa", "pki", "ca.crt")
         cert = cls.get("server", "easy-rsa", "pki", "issued", sanitized_client + ".crt")
@@ -107,16 +119,6 @@ class VPNManager:
         ca = ca.read_text()
         cert = cert.read_text()
         key = key.read_text()
-        os.chdir(ersa)
-
-        subprocess.run([
-            "./easyrsa",
-            "--batch",
-            "--days=3650",
-            "build-client-full",
-            sanitized_client,
-            "nopass"
-        ], check=True)
 
         template = render_template("cert.ovpn.html",
                                    ca=ca,
