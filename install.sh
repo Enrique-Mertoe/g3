@@ -1,4 +1,4 @@
-cat > config << 'EOF'
+cat > config.sh << 'EOF'
 #!/bin/bash
 
 # Define the OpenVPN server configuration file path.  Change this if needed.
