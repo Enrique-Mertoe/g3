@@ -153,9 +153,9 @@ def init(app: Flask):
     @login_required
     def stream_logs():
         def generate():
-            with VPNManager.tail_logs() as log_generator:
-                for line in log_generator:
-                    # Format as Server-Sent Event
-                    yield f"data: {json.dumps(line)}\n\n"
+            log_generator = VPNManager.tail_logs()
+            for line in log_generator:
+                # Format as Server-Sent Event
+                yield f"data: {json.dumps(line)}\n\n"
 
         return Response(generate(), mimetype="text/event-stream")

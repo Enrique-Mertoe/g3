@@ -212,7 +212,7 @@ class VPNManager:
     @staticmethod
     def tail_logs():
         """Generator that yields new log lines as they appear"""
-        log_path = Path('/var/log/openvpn/openvpn-status.log')  # Adjust path as needed
+        log_path = Path('/var/log/openvpn/openvpn.log')  # Adjust path as needed
 
         if not log_path.exists():
             yield "Log file not found"
@@ -233,5 +233,9 @@ class VPNManager:
                     yield line.rstrip()
                 else:
                     break
-        finally:
+        except GeneratorExit:
+            # This will be raised when the generator is closed
+            process.terminate()
+        except Exception as e:
+            yield f"Error: {str(e)}"
             process.terminate()
