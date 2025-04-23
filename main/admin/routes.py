@@ -1,6 +1,6 @@
 from functools import wraps
 
-from flask import session, redirect, flash, url_for, Flask, render_template, request
+from flask import session, redirect, flash, url_for, Flask, render_template, request, send_file
 
 from main.dir_manager import VPNManager
 
@@ -126,9 +126,9 @@ def init(app: Flask):
     @app.route('/download/<client_name>')
     @login_required
     def download_config(client_name):
-        config_path = f"{CLIENT_DIR}/{client_name}.ovpn"
+        config_path = VPNManager.get("client", client_name + ".ovpn")
 
-        if not os.path.exists(config_path):
+        if not config_path.exists():
             flash('Client configuration not found', 'danger')
             return redirect(url_for('index'))
 
