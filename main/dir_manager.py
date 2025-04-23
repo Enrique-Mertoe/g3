@@ -117,13 +117,17 @@ class VPNManager:
         cls._check_exists(ersa, common, ca, cert, key)
         common = common.read_text()
         ca = ca.read_text()
-        cert = cert.read_text()
+        cert = subprocess.run(f"sed -ne '/BEGIN CERTIFICATE/,$ p' {cert}",shell=True, check=True, text=True, capture_output=True).stdout
+
         key = key.read_text()
 
+        tls_cmd = f"sed -ne '/BEGIN OpenVPN Static key/,$ p' {cls.get('server','tc.key')}"
+        tls = subprocess.run(tls_cmd, shell=True, check=True, text=True, capture_output=True).stdout
         template = render_template("cert.ovpn.html",
                                    ca=ca,
                                    cert=cert,
                                    key=key,
+                                   tls=tls,
                                    common=common)
         cls.save_client(sanitized_client, template)
         return True
