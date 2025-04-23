@@ -1,10 +1,11 @@
 import datetime
+from pathlib import Path
 
 import settings
 from main.exceptions import PathError
 
 
-class DirManager:
+class VPNManager:
     BASE = settings.VPN_DIR
 
     @classmethod
@@ -34,3 +35,41 @@ class DirManager:
                     'file_size': stat.st_size
                 }
         return clients
+
+    @classmethod
+    def get_connected_clients(cls):
+        connected = {}
+        status_path = Path("/var/log/openvpn/openvpn-status.log")
+
+        if status_path.exists():
+            try:
+                lines = status_path.read_text().splitlines()
+                client_section = False
+
+                for line in lines:
+                    stripped = line.strip()
+
+                    if stripped == "ROUTING TABLE":
+                        client_section = False
+                        continue
+
+                    if client_section and stripped and not stripped.startswith('Common Name'):
+                        parts = stripped.split(',')
+                        if len(parts) >= 3:
+                            client_name = parts[0]
+                            real_ip = parts[1]
+                            vpn_ip = parts[2].split(':')[0]
+                            connected_since = parts[3] if len(parts) > 3 else 'Unknown'
+                            connected[client_name] = {
+                                'real_ip': real_ip,
+                                'vpn_ip': vpn_ip,
+                                'last_seen': connected_since
+                            }
+
+                    if stripped == "CLIENT LIST":
+                        client_section = True
+
+            except Exception as e:
+                print(f"Error reading VPN status: {e}")
+
+        return connected

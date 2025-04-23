@@ -4,7 +4,7 @@ import re
 import subprocess
 
 import settings
-from main.dir_manager import DirManager
+from main.dir_manager import VPNManager
 
 
 def check_dirs():
@@ -29,7 +29,7 @@ def generate_client_name(prefix="client", min_id=1, max_id=9999):
 
 def test_easy_rsa():
     client_name = generate_client_name()
-    ersa = DirManager.get("server", "easy-rsa")
+    ersa = VPNManager.get("server", "easy-rsa")
     os.chdir(ersa)
     sanitized_client = re.sub(r'[^0-9a-zA-Z_-]', '_', client_name)
 

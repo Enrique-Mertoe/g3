@@ -1,16 +1,13 @@
 from flask import Flask
 
+from main.admin.routes import init
 from tests import testA
 
 app = Flask(__name__)
 
 testA.check_dirs()
 
-
-@app.route('/')
-def hello_world():
-    return 'Hello World!'
-
+init(app)
 
 if __name__ == '__main__':
     app.run()
