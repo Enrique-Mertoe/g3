@@ -105,7 +105,7 @@ def init(app: Flask):
     @login_required
     def revoke_client(client_name):
         try:
-            revoke_client_certificate(client_name)
+            VPNManager.revoke(client_name)
             flash(f'Client {client_name} revoked successfully', 'success')
         except Exception as e:
             flash(f'Error revoking client: {str(e)}', 'danger')
@@ -116,7 +116,7 @@ def init(app: Flask):
     @login_required
     def delete_client(client_name):
         try:
-            delete_client_files(client_name)
+            VPNManager.delete_client(client_name)
             flash(f'Client {client_name} deleted successfully', 'success')
         except Exception as e:
             flash(f'Error deleting client: {str(e)}', 'danger')

@@ -118,11 +118,12 @@ class VPNManager:
         cls._check_exists(ersa, common, ca, cert, key)
         common = common.read_text()
         ca = ca.read_text()
-        cert = subprocess.run(f"sed -ne '/BEGIN CERTIFICATE/,$ p' {cert}",shell=True, check=True, text=True, capture_output=True).stdout
+        cert = subprocess.run(f"sed -ne '/BEGIN CERTIFICATE/,$ p' {cert}", shell=True, check=True, text=True,
+                              capture_output=True).stdout
 
         key = key.read_text()
 
-        tls_cmd = f"sed -ne '/BEGIN OpenVPN Static key/,$ p' {cls.get('server','tc.key')}"
+        tls_cmd = f"sed -ne '/BEGIN OpenVPN Static key/,$ p' {cls.get('server', 'tc.key')}"
         tls = subprocess.run(tls_cmd, shell=True, check=True, text=True, capture_output=True).stdout
         template = render_template("cert.ovpn",
                                    ca=ca.strip(),
@@ -132,3 +133,62 @@ class VPNManager:
                                    common=common.strip())
         cls.save_client(sanitized_client, template)
         return True
+
+    @classmethod
+    def revoke(cls, client_name):
+        try:
+            ersa = cls.get("server", "easy-rsa")
+            pki = ersa / "pki"
+            crl_source = pki / "crl.pem"
+            crl_dest = cls.get("server", "crl.pem")
+            group_name = "nogroup"  # Adjust if your OpenVPN uses a different group
+
+            if not ersa.exists():
+                raise FileNotFoundError(f"Easy-RSA path not found: {ersa}")
+
+            os.chdir(ersa)
+
+            # Revoke certificate
+            subprocess.run(["./easyrsa", "--batch", "revoke", client_name], check=True)
+
+            # Generate new CRL valid for 10 years
+            subprocess.run(["./easyrsa", "--batch", "--days=3650", "gen-crl"], check=True)
+
+            # Remove certificate-related files
+            req_file = pki / "reqs" / f"{client_name}.req"
+            key_file = pki / "private" / f"{client_name}.key"
+
+            for file_path in [crl_dest, req_file, key_file]:
+                try:
+                    if file_path.exists():
+                        file_path.unlink()
+                except Exception as e:
+                    print(f"Warning: Could not delete {file_path}: {e}")
+
+            # Copy updated CRL to OpenVPN server directory
+            subprocess.run(["cp", str(crl_source), str(crl_dest)], check=True)
+
+            # Set proper permissions (OpenVPN reads CRL as 'nobody')
+            subprocess.run(["chown", f"nobody:{group_name}", str(crl_dest)], check=True)
+
+            print(f"\n{client_name} revoked!")
+
+            # Restart OpenVPN service (optional but useful)
+            subprocess.run(["systemctl", "restart", "openvpn-server@server"], check=False)
+            subprocess.run(["systemctl", "restart", "openvpn"], check=False)
+
+        except subprocess.CalledProcessError as e:
+            print(f"Error during revocation process: {e}")
+        except Exception as ex:
+            print(f"Unexpected error: {ex}")
+
+    @classmethod
+    def delete_client(cls,client_name):
+        try:
+            cls.revoke(client_name)
+        except:
+            pass
+        # Remove client config
+        client = cls.get("client",client_name+".ovpn")
+        if client.exists():
+            client.unlink(missing_ok=True)
