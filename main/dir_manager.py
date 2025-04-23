@@ -1,5 +1,10 @@
 import datetime
+import os
+import re
+import subprocess
 from pathlib import Path
+
+from flask import render_template
 
 import settings
 from main.exceptions import PathError
@@ -73,3 +78,50 @@ class VPNManager:
                 print(f"Error reading VPN status: {e}")
 
         return connected
+
+    @classmethod
+    def exists(cls, client_name: str):
+        return cls.BASE.joinpath("client", client_name + ".ovpn").exists()
+
+    @classmethod
+    def _check_exists(cls, *args):
+        for arg in args:
+            if not arg.exits():
+                raise PathError(arg.name)
+
+    @classmethod
+    def gen_cert(cls, client):
+        sanitized_client = re.sub(r'[^0-9a-zA-Z_-]', '_', client)
+
+        if not sanitized_client:
+            print("Invalid client name.")
+            return False
+
+        ersa = cls.get("server", "easy-rsa")
+        common = cls.get("server", "client-common.txt")
+        ca = cls.get("server", "easy-rsa", "pki", "ca.crt")
+        cert = cls.get("server", "easy-rsa", "pki", "issued", sanitized_client + ".crt")
+        key = cls.get("server", "easy-rsa", "pki", "private", sanitized_client + ".key")
+        cls._check_exists(ersa, common, ca, cert, key)
+        common = common.read_text()
+        ca = ca.read_text()
+        cert = cert.read_text()
+        key = key.read_text()
+        os.chdir(ersa)
+
+        subprocess.run([
+            "./easyrsa",
+            "--batch",
+            "--days=3650",
+            "build-client-full",
+            sanitized_client,
+            "nopass"
+        ], check=True)
+
+        template = render_template("cert.ovpn.html",
+                                   ca=ca,
+                                   cert=cert,
+                                   key=key,
+                                   common=common)
+        cls.save_client(sanitized_client, template)
+        return True

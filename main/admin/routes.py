@@ -11,6 +11,7 @@ USERS = {
     }
 }
 
+
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -84,13 +85,13 @@ def init(app: Flask):
                 return redirect(url_for('create_client'))
 
             # Check if client already exists
-            if os.path.exists(f"{CLIENT_DIR}/{client_name}.ovpn"):
+            if VPNManager.exists(client_name):
                 flash('Client already exists', 'danger')
                 return redirect(url_for('create_client'))
 
             try:
                 # Create client certificate and config
-                create_client_certificate(client_name)
+                VPNManager.gen_cert(client_name)
                 flash(f'Client {client_name} created successfully', 'success')
                 return redirect(url_for('client_details', client_name=client_name))
             except Exception as e:
@@ -131,4 +132,3 @@ def init(app: Flask):
             return redirect(url_for('index'))
 
         return send_file(config_path, as_attachment=True)
-

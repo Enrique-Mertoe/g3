@@ -19,7 +19,7 @@ def check_dirs():
     else:
         print("VPN_PATH doesnt exist")
 
-    test_easy_rsa()
+    # test_easy_rsa()
 
 
 def generate_client_name(prefix="client", min_id=1, max_id=9999):
