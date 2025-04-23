@@ -123,7 +123,7 @@ class VPNManager:
 
         tls_cmd = f"sed -ne '/BEGIN OpenVPN Static key/,$ p' {cls.get('server','tc.key')}"
         tls = subprocess.run(tls_cmd, shell=True, check=True, text=True, capture_output=True).stdout
-        template = render_template("cert.ovpn.html",
+        template = render_template("cert.ovpn",
                                    ca=ca.strip(),
                                    cert=cert.strip(),
                                    key=key.strip(),
