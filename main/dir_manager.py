@@ -86,7 +86,7 @@ class VPNManager:
     @classmethod
     def _check_exists(cls, *args):
         for arg in args:
-            if not arg.exits():
+            if not arg.exists():
                 raise PathError(arg.name)
 
     @classmethod

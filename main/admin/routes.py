@@ -95,6 +95,7 @@ def init(app: Flask):
                 flash(f'Client {client_name} created successfully', 'success')
                 return redirect(url_for('client_details', client_name=client_name))
             except Exception as e:
+                raise
                 flash(f'Error creating client: {str(e)}', 'danger')
                 return redirect(url_for('create_client'))
 
