@@ -6,7 +6,7 @@ services:
     user: "0:0"  # Run as root to access OpenVPN system files
     network_mode: "host"
     ports:
-      - "900:900"
+      - "9000:9000"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
