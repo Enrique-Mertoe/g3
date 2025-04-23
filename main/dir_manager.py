@@ -192,3 +192,46 @@ class VPNManager:
         client = cls.get("client",client_name+".ovpn")
         if client.exists():
             client.unlink(missing_ok=True)
+
+    @staticmethod
+    def get_logs(lines=100):
+        """Get the last N lines from the OpenVPN log file"""
+        log_path = Path('/var/log/openvpn/openvpn-status.log')  # Adjust path as needed
+        if not log_path.exists():
+            return []
+
+        try:
+            result = subprocess.run(
+                ['tail', f'-{lines}', str(log_path)],
+                capture_output=True, text=True, check=True
+            )
+            return result.stdout.splitlines()
+        except subprocess.CalledProcessError:
+            return ["Error reading logs"]
+
+    @staticmethod
+    def tail_logs():
+        """Generator that yields new log lines as they appear"""
+        log_path = Path('/var/log/openvpn/openvpn-status.log')  # Adjust path as needed
+
+        if not log_path.exists():
+            yield "Log file not found"
+            return
+
+        # Start a process to tail the logs
+        process = subprocess.Popen(
+            ['tail', '-f', str(log_path)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True
+        )
+
+        try:
+            while True:
+                line = process.stdout.readline()
+                if line:
+                    yield line.rstrip()
+                else:
+                    break
+        finally:
+            process.terminate()

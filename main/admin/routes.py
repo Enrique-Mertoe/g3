@@ -1,6 +1,7 @@
+import json
 from functools import wraps
 
-from flask import session, redirect, flash, url_for, Flask, render_template, request, send_file
+from flask import session, redirect, flash, url_for, Flask, render_template, request, send_file, jsonify, Response
 
 from main.dir_manager import VPNManager
 
@@ -133,3 +134,28 @@ def init(app: Flask):
             return redirect(url_for('index'))
 
         return send_file(config_path, as_attachment=True)
+
+    @app.route('/logs')
+    @login_required
+    def view_logs():
+        # Get the last 100 lines of logs by default
+        log_lines = VPNManager.get_logs(100)
+        return render_template('logs.html', logs=log_lines)
+
+    @app.route('/api/logs')
+    @login_required
+    def get_logs():
+        lines = request.args.get('lines', 100, type=int)
+        log_lines = VPNManager.get_logs(lines)
+        return jsonify(log_lines)
+
+    @app.route('/stream-logs')
+    @login_required
+    def stream_logs():
+        def generate():
+            with VPNManager.tail_logs() as log_generator:
+                for line in log_generator:
+                    # Format as Server-Sent Event
+                    yield f"data: {json.dumps(line)}\n\n"
+
+        return Response(generate(), mimetype="text/event-stream")
