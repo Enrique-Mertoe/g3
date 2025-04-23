@@ -5,7 +5,7 @@ cat > config.sh << 'EOF'
 CONFIG_FILE="/etc/openvpn/server/server.conf"
 
 # Define the line to add.
-STATUS_LINE="status /var/log/openvpn-status.log 1"
+STATUS_LINE="status /var/log/openvpn/openvpn-status.log 1"
 
 # Check if the configuration file exists.
 if [ ! -f "$CONFIG_FILE" ]; then
@@ -27,8 +27,8 @@ echo "The line '$STATUS_LINE' has been added to $CONFIG_FILE"
 #  Uncomment the following lines if you want to include a restart.
 #  You might need to adjust the service name (e.g., 'openvpn@server')
 #  depending on your system.
-#echo "Restarting OpenVPN server..."
-#systemctl restart openvpn
+echo "Restarting OpenVPN server..."
+systemctl restart openvpn-server@server
 
 exit 0
 EOF
