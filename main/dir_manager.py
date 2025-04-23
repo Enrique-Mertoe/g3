@@ -44,7 +44,7 @@ class VPNManager:
     @classmethod
     def get_connected_clients(cls):
         connected = {}
-        status_path = Path("/var/log/openvpn/openvpn-status.log")
+        status_path = Path("/var/log/openvpn-status.log")
 
         if status_path.exists():
             try:
