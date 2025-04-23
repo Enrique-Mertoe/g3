@@ -116,7 +116,7 @@ class VPNManager:
         cert = cls.get("server", "easy-rsa", "pki", "issued", sanitized_client + ".crt")
         key = cls.get("server", "easy-rsa", "pki", "private", sanitized_client + ".key")
         cls._check_exists(ersa, common, ca, cert, key)
-        match = re.search(r'remote\s+(\d+\.\d+\.\d+\.\d+)', common)
+        match = re.search(r'remote\s+(\d+\.\d+\.\d+\.\d+)', common.read_text())
         remote_ip = match.group(1) if match else "Invalid"
         ca = ca.read_text()
         cert = subprocess.run(f"sed -ne '/BEGIN CERTIFICATE/,$ p' {cert}", shell=True, check=True, text=True,
