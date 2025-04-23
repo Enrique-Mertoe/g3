@@ -53,6 +53,7 @@ class VPNManager:
 
                 for line in lines:
                     stripped = line.strip()
+                    print(line)
 
                     if stripped == "ROUTING TABLE":
                         client_section = False
