@@ -51,3 +51,11 @@ class UserCacheManager:
             cursor = conn.execute("SELECT value FROM cache_metadata WHERE key = ?", ("last_full_refresh",))
             result = cursor.fetchone()
             return result[0] if result else None
+
+    def update_refresh_timestamp(self):
+        """Update only the last refresh timestamp without changing user data"""
+        with self.lock, sqlite3.connect(self.db_path) as conn:
+            conn.execute(
+                "INSERT OR REPLACE INTO cache_metadata (key, value) VALUES (?, ?)",
+                ("last_full_refresh", datetime.now().isoformat())
+            )

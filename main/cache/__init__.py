@@ -1,6 +1,8 @@
 import logging
+import os
 import threading
 import time
+from datetime import datetime
 
 
 class UserCacheRefresher:
@@ -40,10 +42,45 @@ class UserCacheRefresher:
                 time.sleep(1)
 
     def _refresh_cache(self):
-        self.logger.info("Refreshing user cache...")
-        users = self.vpn_manager._get_user_list_internal()
-        self.cache_manager.store_users(users)
-        self.logger.info(f"User cache refreshed with {len(users)} users")
+        cert_dir = os.path.join(self.vpn_manager.config_dir, "server/easy-rsa/pki/issued")
+        crl_path = os.path.join(self.vpn_manager.config_dir, "server/easy-rsa/pki/crl.pem")
+
+        # Get last refresh time
+        last_refresh = self.cache_manager.get_last_refresh_time()
+        if last_refresh:
+            last_refresh_time = datetime.fromisoformat(last_refresh).timestamp()
+        else:
+            last_refresh_time = 0
+
+        # Check if any certificate files or CRL have been modified
+        needs_refresh = False
+
+        # Check CRL file modification time
+        if os.path.exists(crl_path):
+            crl_mtime = os.path.getmtime(crl_path)
+            if crl_mtime > last_refresh_time:
+                self.logger.info("CRL file changed, refresh needed")
+                needs_refresh = True
+
+        # Check certificate files
+        if not needs_refresh and os.path.exists(cert_dir):
+            for cert_file in os.listdir(cert_dir):
+                if cert_file.endswith('.crt'):
+                    cert_path = os.path.join(cert_dir, cert_file)
+                    if os.path.getmtime(cert_path) > last_refresh_time:
+                        self.logger.info(f"Certificate file {cert_file} changed, refresh needed")
+                        needs_refresh = True
+                        break
+
+        # Refresh only if needed
+        if needs_refresh:
+            self.logger.info("Refreshing user cache due to file changes...")
+            users = self.vpn_manager._get_user_list_internal()
+            self.cache_manager.store_users(users)
+        else:
+            self.logger.info("No certificate changes detected, skipping refresh")
+            # Just update the timestamp
+            self.cache_manager.update_refresh_timestamp()
 
     def force_refresh(self):
         """Manually trigger a cache refresh"""
