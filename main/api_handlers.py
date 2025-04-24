@@ -4,6 +4,8 @@ import re
 import shutil
 import subprocess
 
+from main.command import CommandExecutor
+
 OPENVPN_CONFIG_DIR = '/etc/openvpn'
 OPENVPN_SERVER_CONFIG = '/etc/openvpn/server/server.conf'
 CONFIG_CACHE_FILE = '/tmp/openvpn/openvpn_config_cache.json'
@@ -187,3 +189,13 @@ def write_openvpn_config(config):
         except:
             pass
         return False, f"Failed to update configuration: {str(e)}"
+
+def run_host_command(command):
+    executor = CommandExecutor(private_key_path='/app/ssh/id_host_access')
+    try:
+        if executor.connect():
+            result = executor.execute_command(command)
+            return result
+        return {"success": False, "error": "Failed to connect to host"}
+    finally:
+        executor.close()

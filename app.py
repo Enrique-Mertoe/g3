@@ -63,16 +63,16 @@ def run_host_command(command):
     finally:
         executor.close()
 
-# Example usage in your app
-def restart_nginx():
-    return run_host_command("systemctl restart nginx")
-
-def check_ssl_cert(domain):
-    return run_host_command(f"openssl x509 -text -noout -in /etc/ssl/{domain}.crt")
-
-print("-------------- text -------------------")
-print(restart_nginx(),
-check_ssl_cert("isp3.lomtechnology.com"))
-print("---------------------- end test ------------------")
+# # Example usage in your app
+# def restart_nginx():
+#     return run_host_command("systemctl restart nginx")
+#
+# def check_ssl_cert(domain):
+#     return run_host_command(f"openssl x509 -text -noout -in /etc/ssl/{domain}.crt")
+#
+# print("-------------- text -------------------")
+# print(restart_nginx(),
+# check_ssl_cert("isp3.lomtechnology.com"))
+# print("---------------------- end test ------------------")
 if __name__ == '__main__':
     app.run()

@@ -8,6 +8,8 @@ import docker
 import logging
 from typing import List, Dict, Any, Optional, Tuple
 
+from main.api_handlers import run_host_command
+
 
 class VpnManager:
     """
@@ -66,54 +68,17 @@ class VpnManager:
             Tuple of (stdout, stderr, return_code)
         """
 
-        client = docker.from_env()
+        command = " ".join(command)
 
-        # Convert command list to a single string command
-        cmd = " ".join(command)
-
-        # Run the command on the host using a temporary container
-        # with host network and privileged mode
-        print("********************************************************************************\n")
-        print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
-        result = subprocess.run(
-            ["/usr/bin/nsenter", "--target", "1", "--mount", "--uts", "--ipc", "--net", "--pid", "--", "sh", "-c",
-             "openssl version"],
-            capture_output=True,
-            text=True,
-            check=False
-        )
-        print(result)
-        print("$$$$$$$$$$$$$$$$$$$$$$$$$$")
-        container = client.containers.run(
-            "alpine:latest",  # Using a minimal image
-            ["sh", "-c", cmd],
-            remove=False,  # Remove container after execution
-            network_mode="host",
-            privileged=True,  # Give container host-level privileges
-            volumes={'/': {'bind': '/host', 'mode': 'rw'}},  # Mount host root
-            working_dir="/host",  # Work from host filesystem
-            stdout=True,
-            stderr=True,
-            detach=True
-        )
         try:
 
-            # Wait for execution and get results
-            result = container.wait()
-            stdout = container.logs(stdout=True, stderr=False).decode('utf-8')
-            stderr = container.logs(stdout=False, stderr=True).decode('utf-8')
-
-            return stdout, stderr, result['StatusCode']
+            res = run_host_command(command)
+            stdout = res["stdout"]
+            stderr = res["stderr"]
+            return stdout, stderr, res['exit_code']
         except Exception as e:
-            raise
             self.logger.error(f"Error executing command {command}: {str(e)}")
             return "", str(e), 1
-        finally:
-            # Clean up the container after we've collected all information
-            try:
-                container.remove()
-            except:
-                pass
 
     def _connect_management_interface(self) -> Optional[socket.socket]:
         """
