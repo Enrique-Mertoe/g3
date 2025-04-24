@@ -93,6 +93,7 @@ class VpnManager:
 
             return stdout, stderr, result['StatusCode']
         except Exception as e:
+            raise
             self.logger.error(f"Error executing command {command}: {str(e)}")
             return "", str(e), 1
 
