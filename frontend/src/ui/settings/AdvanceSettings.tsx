@@ -29,7 +29,7 @@ class OpenVPNService {
 
     async getSettings(): Promise<OpenVPNSettings> {
         const response = await request.get(`${this.baseUrl}/vpn/settings`);
-        if (!response.data.error) {
+        if (response.data.error) {
             throw new Error('Failed to fetch OpenVPN settings');
         }
         return response.data;
