@@ -418,7 +418,7 @@ logging.basicConfig(
 vpn_manager = VpnManager(
     config_dir='/etc/openvpn',  # Adjust paths as needed for your system
     log_file='/var/log/openvpn/openvpn.log',
-    status_file='/var/log/openvpn/status.log',
+    status_file='/var/log/openvpn/openvpn-status.log',
     management_host='127.0.0.1',
     management_port=7505,
     service_name='openvpn-server@server'
