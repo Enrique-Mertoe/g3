@@ -4,6 +4,7 @@ import socket
 import re
 import datetime
 import time
+import docker
 import logging
 from typing import List, Dict, Any, Optional, Tuple
 
@@ -56,7 +57,7 @@ class VpnManager:
 
     def _run_command(self, command: List[str]) -> Tuple[str, str, int]:
         """
-        Run a shell command and return its output.
+        Run a shell command on the host machine using Docker socket.
 
         Args:
             command: List of command and arguments to execute
@@ -65,14 +66,32 @@ class VpnManager:
             Tuple of (stdout, stderr, return_code)
         """
         try:
-            process = subprocess.Popen(
-                command,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True
+            client = docker.from_env()
+
+            # Convert command list to a single string command
+            cmd = " ".join(command)
+
+            # Run the command on the host using a temporary container
+            # with host network and privileged mode
+            container = client.containers.run(
+                "alpine:latest",  # Using a minimal image
+                ["sh", "-c", cmd],
+                remove=True,  # Remove container after execution
+                network_mode="host",
+                privileged=True,  # Give container host-level privileges
+                volumes={'/': {'bind': '/host', 'mode': 'rw'}},  # Mount host root
+                working_dir="/host",  # Work from host filesystem
+                stdout=True,
+                stderr=True,
+                detach=True
             )
-            stdout, stderr = process.communicate()
-            return stdout, stderr, process.returncode
+
+            # Wait for execution and get results
+            result = container.wait()
+            stdout = container.logs(stdout=True, stderr=False).decode('utf-8')
+            stderr = container.logs(stdout=False, stderr=True).decode('utf-8')
+
+            return stdout, stderr, result['StatusCode']
         except Exception as e:
             self.logger.error(f"Error executing command {command}: {str(e)}")
             return "", str(e), 1
@@ -481,7 +500,7 @@ class VpnManager:
             List of dictionaries with user information
         """
         users = []
-        cert_dir = os.path.join(self.config_dir, "easy-rsa/pki/issued")
+        cert_dir = os.path.join(self.config_dir, "server/easy-rsa/pki/issued")
 
         if not os.path.exists(cert_dir):
             self.logger.warning(f"Certificate directory not found: {cert_dir}")
@@ -510,7 +529,7 @@ class VpnManager:
 
                 # Check if user is active (has a valid certificate that's not revoked)
                 active = True
-                crl_path = os.path.join(self.config_dir, "easy-rsa/pki/crl.pem")
+                crl_path = os.path.join(self.config_dir, "server/easy-rsa/pki/crl.pem")
                 if os.path.exists(crl_path):
                     stdout, _, _ = self._run_command(["openssl", "crl", "-in", crl_path, "-text"])
                     if username in stdout:
