@@ -73,6 +73,17 @@ class VpnManager:
 
         # Run the command on the host using a temporary container
         # with host network and privileged mode
+        print("********************************************************************************\n")
+        print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
+        result = subprocess.run(
+            ["/usr/bin/nsenter", "--target", "1", "--mount", "--uts", "--ipc", "--net", "--pid", "--", "sh", "-c",
+             command],
+            capture_output=True,
+            text=True,
+            check=False
+        )
+        print(result)
+        print("$$$$$$$$$$$$$$$$$$$$$$$$$$")
         container = client.containers.run(
             "alpine:latest",  # Using a minimal image
             ["sh", "-c", cmd],
