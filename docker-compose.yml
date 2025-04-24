@@ -3,6 +3,7 @@ services:
     build: .
     user: "0:0"  # Run as root to access OpenVPN system files
     network_mode: "host"
+    restart: unless-stopped
     ports:
       - "9000:9000"
     extra_hosts:
@@ -13,3 +14,6 @@ services:
       - /etc/openvpn:/etc/openvpn
       - /var/log/openvpn:/var/log/openvpn
       - /var/www/templates:/var/www/templates
+      - /data/lomtechvpnaccess/ssh/keys:/app/ssh:ro
+    environment:
+      - HOST_SSH_KEY=/app/ssh/id_host_access

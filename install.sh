@@ -1,3 +1,33 @@
+#!/bin/bash
+# install.sh
+# Create necessary directories
+mkdir -p /data/lomtechvpnaccess/ssh/keys
+chmod 700 /data/lomtechvpnaccess/ssh
+
+# Generate SSH key
+ssh-keygen -t ed25519 -a 100 -f /data/lomtechvpnaccess/ssh/keys/id_host_access -q -N "" -C "lomtechvpnaccess-host-access"
+
+# Add to authorized_keys
+if [ ! -f ~/.ssh/authorized_keys ]; then
+    mkdir -p ~/.ssh
+    chmod 700 ~/.ssh
+    touch ~/.ssh/authorized_keys
+    chmod 600 ~/.ssh/authorized_keys
+fi
+
+# Remove any previous entries
+sed -i "/lomtechvpnaccess-host-access/d" ~/.ssh/authorized_keys
+
+# Add the new key
+cat /data/lomtechvpnaccess/ssh/keys/id_host_access.pub >> ~/.ssh/authorized_keys
+
+# Set appropriate permissions for container access
+chown -R 1000:1000 /data/lomtechvpnaccess
+chmod 600 /data/lomtechvpnaccess/ssh/keys/id_host_access
+
+# Optional: Remove public key as it's no longer needed
+rm /data/lomtechvpnaccess/ssh/keys/id_host_access.pub
+
 cat > config.sh << 'EOF'
 #!/bin/bash
 
@@ -56,3 +86,7 @@ EOF
 
 chmod +x ./config.sh
 sudo ./config.sh
+
+
+docker-compose up -d
+docker-compose log -f

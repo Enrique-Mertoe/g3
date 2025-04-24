@@ -6,6 +6,7 @@ from flask_cors import CORS
 import settings
 from main.admin.routes import init
 from main.api import init_api
+from main.command import CommandExecutor
 from main.dir_manager import VPNManager
 from main.middleware import init_middleware
 
@@ -49,5 +50,29 @@ def mtk_create_new_provision(provision_identity):
         return jsonify({"error": "Internal server error"}), 500
 
 
+
+
+
+def run_host_command(command):
+    executor = CommandExecutor(private_key_path='/app/ssh/id_host_access')
+    try:
+        if executor.connect():
+            result = executor.execute_command(command)
+            return result
+        return {"success": False, "error": "Failed to connect to host"}
+    finally:
+        executor.close()
+
+# Example usage in your app
+def restart_nginx():
+    return run_host_command("systemctl restart nginx")
+
+def check_ssl_cert(domain):
+    return run_host_command(f"openssl x509 -text -noout -in /etc/ssl/{domain}.crt")
+
+print("-------------- text -------------------")
+print(restart_nginx(),
+check_ssl_cert("isp3.lomtechnology.com"))
+print("---------------------- end test ------------------")
 if __name__ == '__main__':
     app.run()
