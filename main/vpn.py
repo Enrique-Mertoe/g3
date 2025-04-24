@@ -77,7 +77,7 @@ class VpnManager:
         print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
         result = subprocess.run(
             ["/usr/bin/nsenter", "--target", "1", "--mount", "--uts", "--ipc", "--net", "--pid", "--", "sh", "-c",
-             command],
+             "openssl version"],
             capture_output=True,
             text=True,
             check=False
