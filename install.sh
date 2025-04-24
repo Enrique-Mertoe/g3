@@ -87,6 +87,6 @@ EOF
 chmod +x ./config.sh
 sudo ./config.sh
 
-
+docker-compose down
 docker-compose up -d
-docker-compose log -f
+docker-compose logs -f
