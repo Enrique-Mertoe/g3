@@ -135,6 +135,79 @@ echo "Configuration updated and TLS auth key ready."
 exit 0
 EOF
 
+cat > manage.sh << 'EOF'
+#!/bin/bash
+
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+# Determine which docker compose command to use
+if command -v docker-compose &> /dev/null; then
+    DOCKER_COMPOSE="docker-compose"
+elif command -v docker &> /dev/null && docker compose version &> /dev/null; then
+    DOCKER_COMPOSE="docker compose"
+else
+    echo -e "${RED}Neither docker-compose nor docker compose is available.${NC}"
+    echo -e "${RED}Please make sure Docker Compose is installed.${NC}"
+    exit 1
+fi
+
+case "$1" in
+    start)
+        echo -e "${YELLOW}Starting OpenVPN Provision Service...${NC}"
+        $DOCKER_COMPOSE up -d
+        ;;
+    stop)
+        echo -e "${YELLOW}Stopping OpenVPN Provision Service...${NC}"
+        $DOCKER_COMPOSE down
+        ;;
+    restart)
+        echo -e "${YELLOW}Restarting OpenVPN Provision Service...${NC}"
+        $DOCKER_COMPOSE down
+        $DOCKER_COMPOSE up -d
+        ;;
+    rebuild)
+        echo -e "${YELLOW}Rebuilding and restarting services (preserves data)...${NC}"
+        $DOCKER_COMPOSE down
+        $DOCKER_COMPOSE build --no-cache
+        $DOCKER_COMPOSE up -d
+        ;;
+    update)
+        echo -e "${YELLOW}Pulling latest code from GitHub, handling conflicts, and rebuilding...${NC}"
+        $DOCKER_COMPOSE down
+        git pull
+        $DOCKER_COMPOSE build --no-cache
+        $DOCKER_COMPOSE up -d
+        ;;
+    status)
+        echo -e "${YELLOW}Service status:${NC}"
+        $DOCKER_COMPOSE ps
+        ;;
+    logs)
+        echo -e "${YELLOW}Showing logs (Ctrl+C to exit):${NC}"
+        $DOCKER_COMPOSE logs -f
+        ;;
+    clean)
+        echo -e "${RED}WARNING: This will remove all containers, volumes, and data!${NC}"
+        read -p "Are you sure you want to continue? (y/n): " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            echo -e "${YELLOW}Stopping and removing all containers and volumes...${NC}"
+            $DOCKER_COMPOSE down -v
+            echo -e "${GREEN}Clean completed.${NC}"
+        else
+            echo -e "${YELLOW}Clean operation cancelled.${NC}"
+        fi
+        ;;
+    *)
+        echo -e "${YELLOW}Usage:${NC} ./manage.sh {start|stop|restart|rebuild|update|status|logs|clean}"
+        exit 1
+esac
+EOF
+
+chmod +x manage.sh
 chmod +x ./config.sh
 sudo ./config.sh
 

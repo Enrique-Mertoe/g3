@@ -421,7 +421,7 @@ vpn_manager = VpnManager(
     status_file='/var/log/openvpn/status.log',
     management_host='127.0.0.1',
     management_port=7505,
-    service_name='openvpn'
+    service_name='openvpn-server@server'
 )
 
 
