@@ -1,6 +1,6 @@
 import os
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, render_template
 from flask_cors import CORS
 
 import settings
@@ -14,11 +14,21 @@ app = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__), 'f
             static_folder=os.path.join(os.path.dirname(__file__), 'frontend', "dist", "static")
             )
 app.secret_key = "sdkajsdlka sdalskdnlaskdn"
-CORS(app, resources={r"/*": {"origins": settings.CORS_TRUSTED_ORIGINS}},supports_credentials=True)
+CORS(app, resources={r"/*": {"origins": settings.CORS_TRUSTED_ORIGINS}}, supports_credentials=True)
 init(app)
 init_api(app)
 
 init_middleware(app)
+
+
+@app.route("/settings")
+def settings_view():
+    return render_template("index.html")
+
+
+@app.route("/security")
+def security_view():
+    return render_template("index.html")
 
 
 @app.route('/mikrotik/openvpn/create_provision/<provision_identity>', methods=["POST"])
@@ -50,9 +60,6 @@ def mtk_create_new_provision(provision_identity):
         return jsonify({"error": "Internal server error"}), 500
 
 
-
-
-
 def run_host_command(command):
     executor = CommandExecutor(private_key_path='/app/ssh/id_host_access')
     try:
@@ -62,6 +69,7 @@ def run_host_command(command):
         return {"success": False, "error": "Failed to connect to host"}
     finally:
         executor.close()
+
 
 # # Example usage in your app
 # def restart_nginx():
