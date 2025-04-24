@@ -28,6 +28,43 @@ chmod 600 /data/lomtechvpnaccess/ssh/keys/id_host_access
 # Optional: Remove public key as it's no longer needed
 rm /data/lomtechvpnaccess/ssh/keys/id_host_access.pub
 
+# Check and update SSH daemon configuration
+SSH_CONFIG="/etc/ssh/sshd_config"
+RESTART_NEEDED=0
+
+# Check PermitRootLogin setting
+if ! grep -q "^PermitRootLogin prohibit-password" $SSH_CONFIG; then
+    # Comment out any existing PermitRootLogin lines
+    sed -i 's/^PermitRootLogin/#PermitRootLogin/' $SSH_CONFIG
+    # Add our configuration
+    echo "PermitRootLogin prohibit-password" >> $SSH_CONFIG
+    RESTART_NEEDED=1
+fi
+
+# Check PubkeyAuthentication setting
+if ! grep -q "^PubkeyAuthentication yes" $SSH_CONFIG; then
+    # Comment out any existing PubkeyAuthentication lines
+    sed -i 's/^PubkeyAuthentication/#PubkeyAuthentication/' $SSH_CONFIG
+    # Add our configuration
+    echo "PubkeyAuthentication yes" >> $SSH_CONFIG
+    RESTART_NEEDED=1
+fi
+
+# Restart SSH daemon only if changes were made
+if [ $RESTART_NEEDED -eq 1 ]; then
+    echo "SSH configuration updated, restarting sshd..."
+    # Check for systemd or alternative service managers
+    if command -v systemctl >/dev/null 2>&1; then
+        systemctl restart sshd
+    elif command -v service >/dev/null 2>&1; then
+        service sshd restart
+    else
+        echo "Warning: Could not restart sshd automatically. Please restart it manually."
+    fi
+else
+    echo "SSH configuration already correct, no restart needed."
+fi
+
 cat > config.sh << 'EOF'
 #!/bin/bash
 
