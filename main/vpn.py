@@ -1124,6 +1124,7 @@ key-direction 1
 
         # Get active users stats
         active_users = self.get_active_users_stats()
+        print("User starts found-------")
 
         # Get data transfer stats
         data_transfer = self.get_data_transfer_stats()
