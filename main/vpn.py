@@ -35,6 +35,7 @@ class VpnManager:
             service_name: Name of the OpenVPN systemd service
         """
         self.config_dir = config_dir
+        self.server_conf_dir = config_dir + "/server"
         self.log_file = log_file
         self.status_file = status_file
         self.management_host = management_host
@@ -460,6 +461,27 @@ class VpnManager:
         self.logger.warning(f"Failed to disconnect client: {username}")
         return False
 
+    def parse_openvpn_config(self):
+        """Parse an OpenVPN configuration file into a structured format"""
+        config_file = self.server_conf_dir + "/server.conf"
+        if not os.path.exists(config_file):
+            return {}
+
+        config = {}
+        with open(config_file, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith('#') or line.startswith(';'):
+                    continue
+
+                parts = line.split(None, 1)
+                directive = parts[0]
+                value = parts[1] if len(parts) > 1 else True
+
+                config[directive] = value
+
+        return config
+
     def restart_server(self) -> bool:
         """
         Restart the OpenVPN server service.
@@ -549,6 +571,7 @@ class VpnManager:
             self.logger.error(f"Error getting user list: {str(e)}")
 
         return users
+
     def get_user_list(self) -> List[Dict[str, Any]]:
         """
         Get list of all OpenVPN users (from certificates).
@@ -1151,7 +1174,6 @@ key-direction 1
 
         # Get active users stats
         active_users = self.get_active_users_stats()
-
 
         # Get data transfer stats
         data_transfer = self.get_data_transfer_stats()

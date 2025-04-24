@@ -1,6 +1,7 @@
 # Mock database - in a real app, use a proper database
 import datetime
 import logging
+import os
 import re
 import time
 
@@ -584,5 +585,197 @@ def init_api(app: Flask):
         except Exception as e:
             app.logger.error(f"Error in update_openvpn_config: {str(e)}")
             return jsonify({'error': str(e)}), 500
+
+
+    #     settings
+    @bp.route('/api/vpn/settings', methods=['GET'])
+    @login_required
+    def get_settings():
+        """Get current OpenVPN settings"""
+        try:
+            # Read the current OpenVPN configuration file
+            config_file = os.path.join(vpn_manager.server_conf_dir, 'server.conf')
+            if not os.path.exists(config_file):
+                return jsonify({"error": "Configuration file not found"}), 404
+
+            with open(config_file, 'r') as f:
+                config_content = f.read()
+
+            # Default settings
+            settings = {
+                "compression": "none",
+                "mtu": 1500,
+                "fragmentSize": 1400,
+                "tcpMssFix": True,
+                "user": "nobody",
+                "group": "nogroup",
+                "persistKey": True,
+                "persistTun": True,
+                "verbosity": 3,
+                "statusFile": vpn_manager.status_file,
+                "logFile": vpn_manager.log_file,
+                "additionalConfig": ""
+            }
+
+            # Parse configuration file and extract settings
+            # Compression
+            comp_match = re.search(r'compress\s+(\S+)', config_content)
+            if comp_match:
+                settings["compression"] = comp_match.group(1)
+
+            # MTU
+            mtu_match = re.search(r'tun-mtu\s+(\d+)', config_content)
+            if mtu_match:
+                settings["mtu"] = int(mtu_match.group(1))
+
+            # Fragment size
+            frag_match = re.search(r'fragment\s+(\d+)', config_content)
+            if frag_match:
+                settings["fragmentSize"] = int(frag_match.group(1))
+
+            # TCP MSS Fix
+            settings["tcpMssFix"] = 'mssfix' in config_content
+
+            # User/Group
+            user_match = re.search(r'user\s+(\S+)', config_content)
+            if user_match:
+                settings["user"] = user_match.group(1)
+
+            group_match = re.search(r'group\s+(\S+)', config_content)
+            if group_match:
+                settings["group"] = group_match.group(1)
+
+            # Persist options
+            settings["persistKey"] = 'persist-key' in config_content
+            settings["persistTun"] = 'persist-tun' in config_content
+
+            # Verbosity
+            verb_match = re.search(r'verb\s+(\d+)', config_content)
+            if verb_match:
+                settings["verbosity"] = int(verb_match.group(1))
+
+            # Status file
+            status_match = re.search(r'status\s+(\S+)', config_content)
+            if status_match:
+                settings["statusFile"] = status_match.group(1)
+
+            # Log file
+            log_match = re.search(r'log\s+(\S+)', config_content)
+            if log_match:
+                settings["logFile"] = log_match.group(1)
+
+            # Extract additional configuration
+            # This is a simple approach - we'll consider any line that doesn't match
+            # our known settings as "additional configuration"
+            known_directives = [
+                'compress', 'tun-mtu', 'fragment', 'mssfix', 'user', 'group',
+                'persist-key', 'persist-tun', 'verb', 'status', 'log'
+            ]
+
+            additional_lines = []
+            for line in config_content.splitlines():
+                line = line.strip()
+                if line and not line.startswith('#'):
+                    is_known = False
+                    for directive in known_directives:
+                        if line.startswith(directive):
+                            is_known = True
+                            break
+                    if not is_known:
+                        additional_lines.append(line)
+
+            settings["additionalConfig"] = '\n'.join(additional_lines)
+
+            return jsonify(settings)
+
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    @bp.route('/api/vpn/settings', methods=['POST'])
+    @login_required
+    def update_settings():
+        """Update OpenVPN settings"""
+        try:
+            settings = request.json
+            config_file = os.path.join(vpn_manager.server_conf_dir, 'server.conf')
+
+            # Create backup of the current configuration
+            backup_file = f"{config_file}.bak"
+            try:
+                with open(config_file, 'r') as src, open(backup_file, 'w') as dst:
+                    dst.write(src.read())
+            except Exception as e:
+                return jsonify({"error": f"Failed to create backup: {str(e)}"}), 500
+
+            # Generate new configuration
+            config_lines = []
+
+            # Add compression setting
+            if settings.get('compression') != 'none':
+                config_lines.append(f"compress {settings['compression']}")
+
+            # Add MTU setting
+            config_lines.append(f"tun-mtu {settings['mtu']}")
+
+            # Add fragment size setting
+            config_lines.append(f"fragment {settings['fragmentSize']}")
+
+            # Add TCP MSS Fix if enabled
+            if settings.get('tcpMssFix'):
+                config_lines.append("mssfix")
+
+            # Add user/group settings
+            config_lines.append(f"user {settings['user']}")
+            config_lines.append(f"group {settings['group']}")
+
+            # Add persist options if enabled
+            if settings.get('persistKey'):
+                config_lines.append("persist-key")
+            if settings.get('persistTun'):
+                config_lines.append("persist-tun")
+
+            # Add verbosity setting
+            config_lines.append(f"verb {settings['verbosity']}")
+
+            # Add status file setting
+            config_lines.append(f"status {settings['statusFile']}")
+
+            # Add log file setting
+            config_lines.append(f"log {settings['logFile']}")
+
+            # Add additional configuration
+            if settings.get('additionalConfig'):
+                config_lines.append("")  # Add a blank line for readability
+                config_lines.append("# Additional custom configuration")
+                for line in settings['additionalConfig'].splitlines():
+                    if line.strip():
+                        config_lines.append(line.strip())
+
+            # Write the new configuration
+            try:
+                with open(config_file, 'w') as f:
+                    f.write('\n'.join(config_lines))
+            except Exception as e:
+                # Restore backup if writing new config fails
+                try:
+                    if os.path.exists(backup_file):
+                        with open(backup_file, 'r') as src, open(config_file, 'w') as dst:
+                            dst.write(src.read())
+                except:
+                    pass  # If restoration fails, we can't do much more
+                return jsonify({"error": f"Failed to write configuration: {str(e)}"}), 500
+
+            return jsonify({"success": True})
+
+        except Exception as e:
+            # Try to restore backup if something went wrong
+            try:
+                if 'backup_file' in locals() and os.path.exists(backup_file):
+                    with open(backup_file, 'r') as src, open(config_file, 'w') as dst:
+                        dst.write(src.read())
+            except:
+                pass  # If restoration fails, we can't do much more
+
+            return jsonify({"error": str(e)}), 500
 
     app.register_blueprint(bp,url_prefix="/")
