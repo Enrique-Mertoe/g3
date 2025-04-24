@@ -1,11 +1,8 @@
-import os
-import subprocess
-import socket
-import re
 import datetime
-import time
-import docker
 import logging
+import os
+import re
+import socket
 from typing import List, Dict, Any, Optional, Tuple
 
 from main.api_handlers import run_host_command
@@ -22,7 +19,7 @@ class VpnManager:
     def __init__(self,
                  config_dir: str = '/etc/openvpn',
                  log_file: str = '/var/log/openvpn/openvpn.log',
-                 status_file: str = '/var/log/openvpn/status.log',
+                 status_file: str = '/var/log/openvpn/openvpn-status.log',
                  management_host: str = '127.0.0.1',
                  management_port: int = 7505,
                  service_name: str = 'openvpn'):

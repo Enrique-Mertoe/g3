@@ -1,6 +1,7 @@
 # Mock database - in a real app, use a proper database
 import datetime
 import logging
+import re
 import time
 
 import psutil
@@ -431,7 +432,7 @@ def init_api(app: Flask):
     # API Endpoints
     @bp.route('/api/basic-info', methods=["GET", "POST"])
     @login_required
-    def server_status():
+    def basic_info():
         # Get basic server information
         info = vpn_manager.get_basic_info()
         return jsonify(info)
@@ -473,6 +474,37 @@ def init_api(app: Flask):
     @login_required
     def restart_server():
         success = vpn_manager.restart_server()
+        return jsonify({"success": success})
+
+    @bp.route('/api/stop_server', methods=['POST'])
+    @login_required
+    def stop_server():
+        _, _, return_code = vpn_manager._run_command(["systemctl", "stop", vpn_manager.service_name])
+        success = return_code == 0
+        return jsonify({"success": success})
+
+    @bp.route('/api/service_pid', methods=['GET'])
+    @login_required
+    def service_pid():
+        stdout, _, _ = vpn_manager._run_command(["systemctl", "show", vpn_manager.service_name, "--property=MainPID"])
+        pid = None
+        if stdout:
+            match = re.search(r'MainPID=(\d+)', stdout)
+            if match and match.group(1) != '0':
+                pid = match.group(1)
+        return jsonify({"pid": pid})
+
+    @bp.route('/api/service_status', methods=['GET'])
+    @login_required
+    def service_status():
+        status = vpn_manager.get_server_status()
+        return jsonify(status)
+
+    @bp.route('/api/start_server', methods=['POST'])
+    @login_required
+    def start_server():
+        _, _, return_code = vpn_manager._run_command(["systemctl", "start", vpn_manager.service_name])
+        success = return_code == 0
         return jsonify({"success": success})
 
     @bp.route('/api/add_client', methods=['POST'])
