@@ -7,6 +7,7 @@ import psutil
 from flask import Flask, request, jsonify, Blueprint
 from werkzeug.security import generate_password_hash
 
+from main.api_handlers import parse_openvpn_config, verify_file_paths
 from main.auth import login_required
 from main.vpn import VpnManager
 
@@ -510,5 +511,46 @@ def init_api(app: Flask):
             "success": True,
             "results": results
         })
+
+    @bp.route('/api/openvpn/config', methods=['GET'])
+    def get_openvpn_config():
+        """API endpoint to get current OpenVPN configuration"""
+        try:
+            config = parse_openvpn_config()
+            return jsonify(config)
+        except Exception as e:
+            app.logger.error(f"Error in get_openvpn_config: {str(e)}")
+            return jsonify({'error': str(e)}), 500
+
+    @bp.route('/api/openvpn/config', methods=['POST'])
+    def update_openvpn_config():
+        """API endpoint to update OpenVPN configuration"""
+        try:
+            config = request.json
+
+            # Validate required fields
+            required_fields = ['caCertPath', 'serverCertPath', 'serverKeyPath',
+                               'dhParamsPath', 'cipher', 'authDigest', 'tlsVersion',
+                               'authType']
+
+            for field in required_fields:
+                if field not in config:
+                    return jsonify({'error': f"Missing required field: {field}"}), 400
+
+            # Verify file paths
+            valid, message = verify_file_paths(config)
+            if not valid:
+                return jsonify({'error': message}), 400
+
+            # Update configuration
+            success, message = write_openvpn_config(config)
+            if success:
+                return jsonify({'message': message})
+            else:
+                return jsonify({'error': message}), 500
+
+        except Exception as e:
+            app.logger.error(f"Error in update_openvpn_config: {str(e)}")
+            return jsonify({'error': str(e)}), 500
 
     app.register_blueprint(bp,url_prefix="/")

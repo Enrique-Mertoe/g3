@@ -13,6 +13,7 @@ import SignUpPage from "./pages/auth/SignUpPage.tsx";
 import RouterView from "./pages/RouterView.tsx";
 import PaymentAndBillingPage from "./pages/PaymentAndBillingPage.tsx";
 import SettingsPage from "./pages/SettingsPage.tsx";
+import SecurityPage from "./pages/SecurityPage.tsx";
 
 function RouterAwareApp() {
     const location = useLocation();
@@ -34,6 +35,7 @@ function RouterAwareApp() {
                 <Route path="/mikrotiks/:pk/" element={<RouterView/>}/>
                 <Route path="/login" element={<SignInPage/>}/>
                 <Route path="/settings" element={<SettingsPage/>}/>
+                <Route path="/security" element={<SecurityPage/>}/>
                 <Route path="/auth/register/" element={<SignUpPage/>}/>
             </Routes>
         </AppProvider>
