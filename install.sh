@@ -28,31 +28,76 @@ chmod 600 /data/lomtechvpnaccess/ssh/keys/id_host_access
 # Optional: Remove public key as it's no longer needed
 rm /data/lomtechvpnaccess/ssh/keys/id_host_access.pub
 
-# Check and update SSH daemon configuration
+I'll modify the script to check the current configuration and ask for confirmation before making any changes. Here's the updated version:
+bash#!/bin/bash
+# install.sh
+# Create necessary directories
+mkdir -p /data/lomtechvpnaccess/ssh/keys
+chmod 700 /data/lomtechvpnaccess/ssh
+
+# Generate SSH key
+ssh-keygen -t ed25519 -a 100 -f /data/lomtechvpnaccess/ssh/keys/id_host_access -q -N "" -C "lomtechvpnaccess-host-access"
+
+# Add to authorized_keys
+if [ ! -f ~/.ssh/authorized_keys ]; then
+    mkdir -p ~/.ssh
+    chmod 700 ~/.ssh
+    touch ~/.ssh/authorized_keys
+    chmod 600 ~/.ssh/authorized_keys
+fi
+
+# Remove any previous entries
+sed -i "/lomtechvpnaccess-host-access/d" ~/.ssh/authorized_keys
+
+# Add the new key
+cat /data/lomtechvpnaccess/ssh/keys/id_host_access.pub >> ~/.ssh/authorized_keys
+
+# Set appropriate permissions for container access
+chown -R 1000:1000 /data/lomtechvpnaccess
+chmod 600 /data/lomtechvpnaccess/ssh/keys/id_host_access
+
+# Optional: Remove public key as it's no longer needed
+rm /data/lomtechvpnaccess/ssh/keys/id_host_access.pub
+
+# Check SSH daemon configuration
 SSH_CONFIG="/etc/ssh/sshd_config"
-RESTART_NEEDED=0
 
 # Check PermitRootLogin setting
-if ! grep -q "^PermitRootLogin prohibit-password" $SSH_CONFIG; then
+ROOT_LOGIN_CONFIG=$(grep "^PermitRootLogin" $SSH_CONFIG 2>/dev/null)
+if [ -z "$ROOT_LOGIN_CONFIG" ]; then
+    echo "Current configuration: PermitRootLogin setting not found or commented out"
+else
+    echo "Current configuration: $ROOT_LOGIN_CONFIG"
+fi
+
+# Check PubkeyAuthentication setting
+PUBKEY_CONFIG=$(grep "^PubkeyAuthentication" $SSH_CONFIG 2>/dev/null)
+if [ -z "$PUBKEY_CONFIG" ]; then
+    echo "Current configuration: PubkeyAuthentication setting not found or commented out"
+else
+    echo "Current configuration: $PUBKEY_CONFIG"
+fi
+
+# Ask for confirmation to modify configuration
+echo ""
+echo "Recommended settings for container-to-host SSH access:"
+echo "  PermitRootLogin prohibit-password"
+echo "  PubkeyAuthentication yes"
+echo ""
+read -p "Do you want to update SSH configuration with these settings? (y/n): " CONFIRM
+
+if [ "$CONFIRM" = "y" ] || [ "$CONFIRM" = "Y" ]; then
     # Comment out any existing PermitRootLogin lines
     sed -i 's/^PermitRootLogin/#PermitRootLogin/' $SSH_CONFIG
     # Add our configuration
     echo "PermitRootLogin prohibit-password" >> $SSH_CONFIG
-    RESTART_NEEDED=1
-fi
 
-# Check PubkeyAuthentication setting
-if ! grep -q "^PubkeyAuthentication yes" $SSH_CONFIG; then
     # Comment out any existing PubkeyAuthentication lines
     sed -i 's/^PubkeyAuthentication/#PubkeyAuthentication/' $SSH_CONFIG
     # Add our configuration
     echo "PubkeyAuthentication yes" >> $SSH_CONFIG
-    RESTART_NEEDED=1
-fi
 
-# Restart SSH daemon only if changes were made
-if [ $RESTART_NEEDED -eq 1 ]; then
-    echo "SSH configuration updated, restarting sshd..."
+    echo "SSH configuration updated. Restarting sshd..."
     # Check for systemd or alternative service managers
     if command -v systemctl >/dev/null 2>&1; then
         systemctl restart sshd
@@ -62,7 +107,7 @@ if [ $RESTART_NEEDED -eq 1 ]; then
         echo "Warning: Could not restart sshd automatically. Please restart it manually."
     fi
 else
-    echo "SSH configuration already correct, no restart needed."
+    echo "SSH configuration unchanged."
 fi
 
 cat > config.sh << 'EOF'
