@@ -76,7 +76,7 @@ class VpnManager:
         container = client.containers.run(
             "alpine:latest",  # Using a minimal image
             ["sh", "-c", cmd],
-            remove=True,  # Remove container after execution
+            remove=False,  # Remove container after execution
             network_mode="host",
             privileged=True,  # Give container host-level privileges
             volumes={'/': {'bind': '/host', 'mode': 'rw'}},  # Mount host root
