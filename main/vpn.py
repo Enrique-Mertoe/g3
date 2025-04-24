@@ -9,6 +9,8 @@ import logging
 from typing import List, Dict, Any, Optional, Tuple
 
 from main.api_handlers import run_host_command
+from main.cache import UserCacheRefresher
+from main.cache.user_cashe import UserCacheManager
 
 
 class VpnManager:
@@ -42,7 +44,9 @@ class VpnManager:
         self.management_port = management_port
         self.service_name = service_name
         self.logger = logging.getLogger('openvpn_manager')
-
+        self.user_cache = UserCacheManager()
+        self.cache_refresher = UserCacheRefresher(self, self.user_cache)
+        self.cache_refresher.start()
         # Ensure the required directories exist and are accessible
         self._check_paths()
 
@@ -476,12 +480,10 @@ class VpnManager:
 
         return success
 
-    def get_user_list(self) -> List[Dict[str, Any]]:
+    def _get_user_list_internal(self) -> List[Dict[str, Any]]:
         """
-        Get list of all OpenVPN users (from certificates).
-
-        Returns:
-            List of dictionaries with user information
+        Internal method that does the actual work of getting the user list.
+        This is the original get_user_list implementation.
         """
         users = []
         cert_dir = os.path.join(self.config_dir, "server/easy-rsa/pki/issued")
@@ -548,6 +550,34 @@ class VpnManager:
 
         except Exception as e:
             self.logger.error(f"Error getting user list: {str(e)}")
+
+        return users
+    def get_user_list(self) -> List[Dict[str, Any]]:
+        """
+        Get list of all OpenVPN users (from certificates).
+
+        Returns:
+            List of dictionaries with user information
+        """
+        users = self.user_cache.get_users()
+
+        # If cache is empty, try to populate it immediately but with a timeout
+        if not users:
+            self.logger.info("User cache empty, triggering background refresh")
+            self.cache_refresher.force_refresh()
+            # Return empty list for now - next request will have the data
+            return []
+
+        # Update with active client information (this should be fast)
+        active_clients = self.get_active_clients()
+        for client in active_clients:
+            for user in users:
+                if user["username"] == client["username"]:
+                    user["active"] = True
+                    user["ip"] = client["ip_address"]
+                    user["download"] = client["download"]
+                    user["upload"] = client["upload"]
+                    break
 
         return users
 
@@ -1124,7 +1154,7 @@ key-direction 1
 
         # Get active users stats
         active_users = self.get_active_users_stats()
-        print("User starts found-------")
+
 
         # Get data transfer stats
         data_transfer = self.get_data_transfer_stats()
