@@ -1,12 +1,24 @@
+import os
+
 from flask import Flask, jsonify
+from flask_cors import CORS
 
+import settings
 from main.admin.routes import init
+from main.api import init_api
 from main.dir_manager import VPNManager
-from tests import testA
+from main.middleware import init_middleware
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__), 'frontend', "dist"),
+            static_folder=os.path.join(os.path.dirname(__file__), 'frontend', "dist", "static")
+            )
 app.secret_key = "sdkajsdlka sdalskdnlaskdn"
+CORS(app, resources={r"/*": {"origins": settings.CORS_TRUSTED_ORIGINS}},supports_credentials=True)
 init(app)
+init_api(app)
+
+init_middleware(app)
+
 
 @app.route('/mikrotik/openvpn/create_provision/<provision_identity>', methods=["POST"])
 def mtk_create_new_provision(provision_identity):
@@ -35,7 +47,6 @@ def mtk_create_new_provision(provision_identity):
     except Exception as e:
         # REQUEST_COUNT.labels(method='POST', endpoint='/create_provision', status='500').inc()
         return jsonify({"error": "Internal server error"}), 500
-
 
 
 if __name__ == '__main__':

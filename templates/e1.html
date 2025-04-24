@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenVPN Advanced Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .sidebar {
+            min-height: calc(100vh - 56px);
+            background-color: #f8f9fa;
+            padding-top: 20px;
+        }
+
+        .content {
+            padding: 20px;
+        }
+
+        .client-card {
+            transition: transform 0.2s;
+        }
+
+        .client-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .connected {
+            border-left: 4px solid #28a745;
+        }
+
+        .disconnected {
+            border-left: 4px solid #dc3545;
+        }
+
+        .nav-tabs .nav-link {
+            color: #495057;
+        }
+
+        .nav-tabs .nav-link.active {
+            font-weight: bold;
+            border-bottom: 3px solid #0d6efd;
+        }
+
+        .settings-form {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .info-icon {
+            color: #6c757d;
+            cursor: pointer;
+        }
+
+        .form-section {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            background-color: #f8f9fa;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #2196F3;
+        }
+
+        input:focus + .slider {
+            box-shadow: 0 0 1px #2196F3;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        .status-box {
+            padding: 1rem;
+            border-radius: 0.5rem;
+            background-color: #f8f9fa;
+            margin-bottom: 1rem;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+
+        .status-running {
+            background-color: #28a745;
+        }
+
+        .status-stopped {
+            background-color: #dc3545;
+        }
+
+        .log-window {
+            background-color: #212529;
+            color: #f8f9fa;
+            font-family: monospace;
+            height: 200px;
+            overflow-y: auto;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .log-line {
+            margin-bottom: 0.25rem;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .log-info {
+            color: #17a2b8;
+        }
+
+        .log-warning {
+            color: #ffc107;
+        }
+
+        .log-error {
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="#"><i class="fas fa-shield-alt me-2"></i>OpenVPN Manager</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                    <span class="nav-link">Welcome, Admin</span>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#"><i class="fas fa-sign-out-alt me-1"></i>Logout</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-2 col-lg-2 px-0 sidebar">
+            <div class="list-group list-group-flush">
+                <a href="#" class="list-group-item list-group-item-action"><i class="fas fa-tachometer-alt me-2"></i>Dashboard</a>
+                <a href="#" class="list-group-item list-group-item-action active"><i class="fas fa-cogs me-2"></i>Settings</a>
+                <a href="#" class="list-group-item list-group-item-action"><i class="fas fa-users me-2"></i>Clients</a>
+                <a href="#" class="list-group-item list-group-item-action"><i class="fas fa-plus-circle me-2"></i>Create Client</a>
+                <a href="#" class="list-group-item list-group-item-action"><i class="fas fa-file-alt me-2"></i>Server Logs</a>
+                <a href="#" class="list-group-item list-group-item-action"><i class="fas fa-chart-line me-2"></i>Statistics</a>
+                <a href="#" class="list-group-item list-group-item-action"><i class="fas fa-lock me-2"></i>Security</a>
+            </div>
+        </div>
+        <div class="col-md-10 col-lg-10 content">
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                Settings have been saved successfully.
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-cogs me-2"></i>OpenVPN Advanced Settings</h2>
+                <button class="btn btn-primary"><i class="fas fa-save me-2"></i>Save All Changes</button>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <ul class="nav nav-tabs" id="settingsTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="general-tab" data-bs-toggle="tab" data-bs-target="#general" type="button" role="tab" aria-controls="general" aria-selected="false">
+                                <i class="fas fa-sliders-h me-2"></i>General
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="network-tab" data-bs-toggle="tab" data-bs-target="#network" type="button" role="tab" aria-controls="network" aria-selected="false">
+                                <i class="fas fa-network-wired me-2"></i>Network
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="security-tab" data-bs-toggle="tab" data-bs-target="#security" type="button" role="tab" aria-controls="security" aria-selected="false">
+                                <i class="fas fa-shield-alt me-2"></i>Security
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="routing-tab" data-bs-toggle="tab" data-bs-target="#routing" type="button" role="tab" aria-controls="routing" aria-selected="false">
+                                <i class="fas fa-route me-2"></i>Routing
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="advanced-tab" data-bs-toggle="tab" data-bs-target="#advanced" type="button" role="tab" aria-controls="advanced" aria-selected="true">
+                                <i class="fas fa-code me-2"></i>Advanced
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content p-4" id="settingsTabsContent">
+                        <!-- General Settings Tab Content - Hidden -->
+                        <div class="tab-pane fade" id="general" role="tabpanel" aria-labelledby="general-tab">
+                            <!-- Content from previous artifact -->
+                        </div>
+
+                        <!-- Network Settings Tab Content - Hidden -->
+                        <div class="tab-pane fade" id="network" role="tabpanel" aria-labelledby="network-tab">
+                            <!-- Content from previous artifact -->
+                        </div>
+
+                        <!-- Security Settings Tab Content - Hidden -->
+                        <div class="tab-pane fade" id="security" role="tabpanel" aria-labelledby="security-tab">
+                            <!-- Content from previous artifact -->
+                        </div>
+
+                        <!-- Routing Settings Tab Content - Hidden -->
+                        <div class="tab-pane fade" id="routing" role="tabpanel" aria-labelledby="routing-tab">
+                            <!-- Content from previous artifact -->
+                        </div>
+
+                        <!-- Advanced Settings Tab - Visible -->
+                        <div class="tab-pane fade show active" id="advanced" role="tabpanel" aria-labelledby="advanced-tab">
+                            <form class="settings-form">
+                                <div class="form-section">
+                                    <h4>Performance Tuning</h4>
+                                    <div class="row mb-3">
+                                        <label class="col-sm-3 col-form-label">Compression</label>
+                                        <div class="col-sm-7">
+                                            <select class="form-select">
+                                                <option value="none">None (recommended)</option>
+                                                <option value="lz4">LZ4</option>
+                                                <option value="lz4-v2">LZ4-v2</option>
+                                                <option value="lzo">LZO (legacy)</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-sm-2">
+                                            <i class="fas fa-info-circle info-icon" data-bs-toggle="tooltip" title="Data compression method. Note: Compression can potentially weaken security and is generally not recommended unless needed for performance reasons."></i>
+                                        </div>
+                                    </div>
+
+                                    <div class="row mb-3">
+                                        <label class="col-sm-3 col-form-label">MTU</label>
+                                        <div class="col-sm-7">
+                                            <input type="number" class="form-control" value="1500">
+                                        </div>
+                                        <div class="col-sm-2">
+                                            <i class="fas fa-info-circle info-icon" data-bs-toggle="tooltip" title="Maximum Transmission Unit (MTU) size in bytes. Default is 1500."></i>
+                                        </div>
+                                    </div>
+
+                                    <div class="row mb-3">
+                                        <label class="col-sm-3 col-form-label">Fragment Size</label>
+                                        <div class="col-sm-7">
+                                            <input type="number" class="form-control" value="1400">
+                                        </div>
+                                        <div class="col-sm-2">
+                                            <i class="fas fa-info-circle info-icon" data-bs-toggle="tooltip" title="Fragment packets larger than this size. Helps with MTU issues on some networks."></i>
+                                        </div>
+                                    </div>
+
+                                    <div class="row mb-3">
+                                        <label class="col-sm-3 col-form-label">TCP MSS Fix</label>
+                                        <div class="col-sm-7">
+                                            <div class="form-check form-switch">
+                                                <label class="switch">
+                                                    <input type="checkbox" checked>
+                                                    <span class="slider"></span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-2">
+                                            <i class="fas fa-info-circle info-icon" data-bs-toggle="tooltip" title="Adjust TCP Maximum Segment Size to prevent fragmentation. Recommended for most setups."></i>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-section">
+                                    <h4>Process Management</h4>
+                                    <div class="row mb-3">
+                                        <label class="col-sm-3 col-form-label">User/Group</label>
+                                        <div class="col-sm-4">
+                                            <input type="text" class="form-control" placeholder="User" value="nobody">
+                                        </div>
+                                        <div class="col-sm-3">
+                                            <input type="text" class="form-control" placeholder="Group" value="nogroup">
+                                        </div>
+                                        <div class="col-sm-2">
+                                            <i class="fas fa-info-circle info-icon" data-bs-toggle="tooltip" title="User and group for the OpenVPN daemon to run as after initialization."></i>
+                                        </div>
+                                    </div>
+
+                                    <div class="row mb-3">
+                                        <label class="col-sm-3 col-form-label">Persist Options</label>
+                                        <div class="col-sm-7">
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" checked id="persistKey">
+                                                <label class="form-check-label" for="persistKey">
+                                                    Persist Key
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" checked id="persistTun">
+                                                <label class="form-check-label" for="persistTun">
+                                                    Persist TUN
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-2">
+                                            <i class="fas fa-info-circle info-icon" data-bs-toggle="tooltip" title="Try to preserve state across restarts."></i>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-section">
+                                    <h4>Logging & Debugging</h4>
+                                    <div class="row mb-3">
+                                        <label class="col-sm-3 col-form-label">Verbosity</label>
+                                        <div class="col-sm-7">
+                                            <select class="form-select">
+                                                <option value="0">0 - Quiet (errors only)</option>
+                                                <option value="1">1 - Minimal</option>
+                                                <option value="2">2 - Normal</option>
+                                                <option value="3" selected>3 - Verbose</option>
+                                                <option value="4">4 - Debug</option>
+                                                <option value="5">5 - Maximum Debug</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-sm-2">
+                                            <i class="fas fa-info-circle info-icon" data-bs-toggle="tooltip" title="Log verbosity level. Higher values produce more detailed logs."></i>
+                                        </div>
+                                    </div>
+
+                                    <div class="row mb-3">
+                                        <label class="col-sm-3 col-form-label">Status File</label>
+                                        <div class="col-sm-7">
+                                            <input type="text" class="form-control" value="/var/log/openvpn-status.log">
+                                        </div>
+                                        <div class="col-sm-2">
+                                            <i class="fas fa-info-circle info-icon" data-bs-toggle="tooltip" title="Path to the status file that records current connections."></i>
+                                        </div>
+                                    </div>
+
+                                    <div class="row mb-3">
+                                        <label class="col-sm-3 col-form-label">Log File</label>
+                                        <div class="col-sm-7">
+                                            <input type="text" class="form-control" value="/var/log/openvpn.log">
+                                        </div>
+                                        <div class="col-sm-2">
+                                            <i class="fas fa-info-circle info-icon" data-bs-toggle="tooltip" title="Path to the log file. If not specified, logs go to syslog."></i>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-section">
+                                    <h4>Custom Configuration</h4>
+                                    <div class="row mb-3">
+                                        <label class="col-sm-3 col-form-label">Additional Config</label>
+                                        <div class="col-sm-7">
+                                            <textarea class="form-control" rows="6" placeholder="Enter additional OpenVPN configuration directives here (one per line)">max-clients 100
+topology subnet
+push "dhcp-option DNS 8.8.8.8"
+push "dhcp-option DNS 8.8.4.4"
+push "route 192.168.1.0 255.255.255.0"</textarea>
+                                        </div>
+                                        <div class="col-sm-2">
+                                            <i class="fas fa-info-circle info-icon" data-bs-toggle="tooltip" title="Additional configuration directives to add to the OpenVPN server config file."></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Server Status Card -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-server me-2"></i>Server Status</h5>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="status-box">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h6 class="mb-0">OpenVPN Service</h6>
+                                    <span class="badge bg-success"><span class="status-indicator status-running"></span> Running</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Uptime:</span>
+                                    <span>3 days, 7 hours, 42 minutes</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Active Clients:</span>
+                                    <span>12 / 100</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Total Traffic:</span>
+                                    <span>47.2 GB</span>
+                                </div>
+
+                                <div class="btn-group mt-3">
+                                    <button class="btn btn-warning btn-sm"><i class="fas fa-sync me-1"></i> Restart Service</button>
+                                    <button class="btn btn-danger btn-sm"><i class="fas fa-stop me-1"></i> Stop Service</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="status-box">
+                                <h6 class="mb-3">Recent Logs</h6>
+                                <div class="log-window">
+                                    <div class="log-line log-info">[INFO] 2024-04-24 15:23:45 - Client 'laptop1' connected from 203.0.113.42:49172</div>
+                                    <div class="log-line">[NOTICE] 2024-04-24 15:23:45 - 'laptop1' assigned IP address 10.8.0.6</div>
+                                    <div class="log-line log-warning">[WARNING] 2024-04-24 15:22:30 - Authenticate/Decrypt packet error: packet HMAC authentication failed</div>
+                                    <div class="log-line">[NOTICE] 2024-04-24 15:20:12 - 'smartphone' assigned IP address 10.8.0.5</div>
+                                    <div class="log-line">[NOTICE] 2024-04-24 15:20:12 - Client 'smartphone' connected from 198.51.100.75:62013</div>
+                                    <div class="log-line log-error">[ERROR] 2024-04-24 15:18:45 - TLS Error: TLS handshake failed</div>
+                                </div>
+                                <div class="mt-3">
+                                    <a href="#" class="btn btn-outline-primary btn-sm"><i class="fas fa-file-alt me-1"></i> View Full Logs</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Restart Required Warning -->
+            <div class="alert alert-warning mt-4" role="alert">
+                <i class="fas fa-exclamation-triangle me-2"></i> <strong>Note:</strong> Some changes require restarting the OpenVPN service to take effect.
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+</script>
+</body>
+</html>

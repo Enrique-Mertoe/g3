@@ -1,27 +1,9 @@
 import json
-from functools import wraps
 
 from flask import session, redirect, flash, url_for, Flask, render_template, request, send_file, jsonify, Response
 
+from main.auth import login_required, USERS
 from main.dir_manager import VPNManager
-
-USERS = {
-    "admin": {
-        "password": "admin123",  # Change this!
-        "role": "admin"
-    }
-}
-
-
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'username' not in session:
-            flash('Please log in to access this page', 'danger')
-            return redirect(url_for('login'))
-        return f(*args, **kwargs)
-
-    return decorated_function
 
 
 def init(app: Flask):
@@ -35,18 +17,18 @@ def init(app: Flask):
     @app.route('/login', methods=['GET', 'POST'])
     def login():
         if request.method == 'POST':
-            username = request.form.get('username')
+            username = request.form.get('email').strip()
             password = request.form.get('password')
 
             if username in USERS and USERS[username]['password'] == password:
+                print("00")
                 session['username'] = username
                 session['role'] = USERS[username]['role']
-                flash('Login successful', 'success')
-                return redirect(url_for('index'))
+                return jsonify({"ok": True})
             else:
-                flash('Invalid credentials', 'danger')
+                return jsonify({"error":['Invalid credentials']})
 
-        return render_template('login.html')
+        return render_template('index.html')
 
     @app.route('/logout')
     def logout():
