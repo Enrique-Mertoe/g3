@@ -99,14 +99,14 @@ const HTop = ({info}: { info: HTopData | null }) => {
                             <div className="w-20 h-5 bg-gray-200 rounded-md"></div>
                         ) : (
                             <>
-                                <span className="text-xl font-bold text-gray-800">Online</span>
+                                <span className="text-xl font-bold text-gray-800">{info?.server.status}</span>
                                 <span className="ml-2 inline-block w-3 h-3 bg-green-500 rounded-full"></span>
                             </>
                         )}
                     </div>
                     <p className="text-xs text-gray-500">
                         {isLoading ?
-                            <div className="w-28 h-3 bg-gray-200 mt-1 rounded-md"></div> : "Uptime: 14d 23h 42m"}
+                            <div className="w-28 h-3 bg-gray-200 mt-1 rounded-md"></div> : `Uptime: ${info?.server.uptime}`}
                     </p>
                 </div>
             </div>
