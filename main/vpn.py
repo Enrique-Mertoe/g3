@@ -65,26 +65,27 @@ class VpnManager:
         Returns:
             Tuple of (stdout, stderr, return_code)
         """
+
+        client = docker.from_env()
+
+        # Convert command list to a single string command
+        cmd = " ".join(command)
+
+        # Run the command on the host using a temporary container
+        # with host network and privileged mode
+        container = client.containers.run(
+            "alpine:latest",  # Using a minimal image
+            ["sh", "-c", cmd],
+            remove=True,  # Remove container after execution
+            network_mode="host",
+            privileged=True,  # Give container host-level privileges
+            volumes={'/': {'bind': '/host', 'mode': 'rw'}},  # Mount host root
+            working_dir="/host",  # Work from host filesystem
+            stdout=True,
+            stderr=True,
+            detach=True
+        )
         try:
-            client = docker.from_env()
-
-            # Convert command list to a single string command
-            cmd = " ".join(command)
-
-            # Run the command on the host using a temporary container
-            # with host network and privileged mode
-            container = client.containers.run(
-                "alpine:latest",  # Using a minimal image
-                ["sh", "-c", cmd],
-                remove=True,  # Remove container after execution
-                network_mode="host",
-                privileged=True,  # Give container host-level privileges
-                volumes={'/': {'bind': '/host', 'mode': 'rw'}},  # Mount host root
-                working_dir="/host",  # Work from host filesystem
-                stdout=True,
-                stderr=True,
-                detach=True
-            )
 
             # Wait for execution and get results
             result = container.wait()
@@ -96,6 +97,12 @@ class VpnManager:
             raise
             self.logger.error(f"Error executing command {command}: {str(e)}")
             return "", str(e), 1
+        finally:
+            # Clean up the container after we've collected all information
+            try:
+                container.remove()
+            except:
+                pass
 
     def _connect_management_interface(self) -> Optional[socket.socket]:
         """
