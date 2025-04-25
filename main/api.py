@@ -518,7 +518,7 @@ def init_api(app: Flask):
     @bp.route('/api/add_client', methods=['POST'])
     @login_required
     def add_client():
-        data = request.json
+        data = request.form
         username = data.get('username')
         email = data.get('email', '')
         full_name = data.get('full_name', '')
