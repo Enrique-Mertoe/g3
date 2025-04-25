@@ -20,7 +20,7 @@ class VpnManager:
 
     def __init__(self,
                  config_dir: str = '/etc/openvpn',
-                 log_file: str = '/var/log/openvpn/openvpn.log',
+                 log_file: str = '/var/log/openvpn/openvpn-status.log',
                  status_file: str = '/var/log/openvpn/openvpn-status.log',
                  management_host: str = '127.0.0.1',
                  management_port: int = 7505,
