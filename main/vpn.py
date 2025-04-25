@@ -819,10 +819,10 @@ class VpnManager:
             username: Username for the client
         """
         # Paths to required files
-        ca_path = os.path.join(self.config_dir, "easy-rsa/pki/ca.crt")
-        cert_path = os.path.join(self.config_dir, "easy-rsa/pki/issued", f"{username}.crt")
-        key_path = os.path.join(self.config_dir, "easy-rsa/pki/private", f"{username}.key")
-        ta_path = os.path.join(self.config_dir, "ta.key")
+        ca_path = os.path.join(self.server_conf_dir, "easy-rsa/pki/ca.crt")
+        cert_path = os.path.join(self.server_conf_dir, "easy-rsa/pki/issued", f"{username}.crt")
+        key_path = os.path.join(self.server_conf_dir, "easy-rsa/pki/private", f"{username}.key")
+        ta_path = os.path.join(self.server_conf_dir, "ta.key")
 
         # Read server configuration to extract server address and port
         server_config_path = os.path.join(self.config_dir, "server.conf")
