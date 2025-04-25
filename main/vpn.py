@@ -825,7 +825,7 @@ class VpnManager:
         ta_path = os.path.join(self.server_conf_dir, "ta.key")
 
         # Read server configuration to extract server address and port
-        server_config_path = os.path.join(self.config_dir, "server.conf")
+        server_config_path = os.path.join(self.server_conf_dir, "server.conf")
         server_address = "your-vpn-server.com"  # Default address
         server_port = "1194"  # Default port
 
@@ -899,9 +899,9 @@ key-direction 1
             with open(config_path, 'w') as f:
                 f.write(client_config)
 
-            self.logger.info(f"Client configuration created: {config_path}")
+            print(f"Client configuration created: {config_path}")
         except Exception as e:
-            self.logger.error(f"Error creating client configuration: {str(e)}")
+            print(f"Error creating client configuration: {str(e)}")
 
     def revoke_client(self, username: str) -> bool:
         """
