@@ -314,7 +314,7 @@ const VPNDashboard = () => {
     };
 
     const handleDownloadConfig = (client: VPNClient) => {
-        if (client.has_ovpn_file)
+        // if (client.has_ovpn_file)
             location.href = "/download/" + client.name
     };
 

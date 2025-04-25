@@ -131,7 +131,7 @@ class VPNManager:
                                    ca=ca.strip(),
                                    cert=cert.strip(),
                                    key=key.strip(),
-                                   tls=tls.strip(),
+                                   tls=False,
                                    ip=remote_ip)
         cls.save_client(sanitized_client, template)
         os.chdir(current_dir)
