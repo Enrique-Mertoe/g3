@@ -137,6 +137,7 @@ class VPNManager:
         print(f"Template rendered for {template}")
         cls.save_client(sanitized_client, template)
         os.chdir(current_dir)
+        print(f"Client saved for {sanitized_client}")
         return True
 
     @classmethod
