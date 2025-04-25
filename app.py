@@ -52,10 +52,11 @@ def mtk_create_new_provision(provision_identity):
     """
     # with REQUEST_LATENCY.labels(endpoint='/create_provision').time():
     try:
+        print(f"Checking if client {provision_identity} exists")
         if VPNManager.exists(provision_identity):
             # REQUEST_COUNT.labels(method='POST', endpoint='/create_provision', status='400').inc()
             return jsonify({"error": "Client already exists"}), 400
-
+        print(f"Generating certificate for {provision_identity}")
         VPNManager.gen_cert(provision_identity)
 
         # REQUEST_COUNT.labels(method='POST', endpoint='/create_provision', status='202').inc()
