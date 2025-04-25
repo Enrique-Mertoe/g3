@@ -82,6 +82,7 @@ class VPNManager:
 
     @classmethod
     def exists(cls, client_name: str):
+        print(cls.BASE.joinpath("client", client_name + ".ovpn").exists())
         return cls.BASE.joinpath("client", client_name + ".ovpn").exists()
 
     @classmethod
