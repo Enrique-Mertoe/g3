@@ -2,7 +2,7 @@ import os
 
 from flask import Flask, jsonify, render_template
 from flask_cors import CORS
-
+import socket
 import settings
 from main.admin.routes import init
 from main.api import init_api
@@ -59,12 +59,18 @@ def mtk_create_new_provision(provision_identity):
         print(f"Generating certificate for {provision_identity}")
         VPNManager.gen_cert(provision_identity)
 
+        hostname = socket.gethostname()
+        server_ip = socket.gethostbyname(hostname)
+        print(f"Server IP: {server_ip}")
+    
+
         # REQUEST_COUNT.labels(method='POST', endpoint='/create_provision', status='202').inc()
         return jsonify({
             "status": "processing",
             "task_id": "123", #task.id
             "provision_identity": provision_identity,
-            "secret": "123" #secret
+            "secret": "123", #secret
+            "ip_address": server_ip
         }), 202
 
     except ValueError as e:

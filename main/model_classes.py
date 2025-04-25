@@ -17,3 +17,4 @@ class VPNUser:
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
+
