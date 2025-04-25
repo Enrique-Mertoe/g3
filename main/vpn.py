@@ -512,6 +512,7 @@ class VpnManager:
         """
         users = []
         cert_dir = os.path.join(self.config_dir, "server/easy-rsa/pki/issued")
+        ovpn_dir = os.path.join(self.config_dir, "client")
 
         if not os.path.exists(cert_dir):
             self.logger.warning(f"Certificate directory not found: {cert_dir}")
@@ -546,6 +547,9 @@ class VpnManager:
                     if username in stdout:
                         active = False
 
+                ovpn_file_path = os.path.join(ovpn_dir, f"{username}.ovpn")
+                has_ovpn_file = os.path.exists(ovpn_file_path)
+
                 # Get user's last connection from logs (if possible)
                 last_connected = self._get_last_connection_time(username)
 
@@ -559,7 +563,8 @@ class VpnManager:
                     "active": active,
                     "ip": "",  # Only available when connected
                     "download": 0,  # Only available when connected
-                    "upload": 0  # Only available when connected
+                    "upload": 0,  # Only available when connected
+                    "has_ovpn_file": has_ovpn_file
                 })
 
             # Update user information with connection status for active clients

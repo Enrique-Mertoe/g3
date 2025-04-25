@@ -26,6 +26,7 @@ interface VPNClient {
     transferDown: string;
     bandwidth: string;
     device: string;
+    has_ovpn_file: boolean;
 }
 
 interface DashboardStats {
@@ -80,7 +81,7 @@ const SkeletonClientCard = () => (
 );
 
 // Card component for statistics
-const StatCard = ({title, value, color, icon}:any) => (
+const StatCard = ({title, value, color, icon}: any) => (
     <div className={`rounded-lg shadow-md p-4 bg-${color} text-white`}>
         <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-medium opacity-90">{title}</h3>
@@ -91,7 +92,7 @@ const StatCard = ({title, value, color, icon}:any) => (
 );
 
 // Client card component
-const ClientCard = ({client, onViewDetails, onDownloadConfig, onRevokeClient, onOpenDetailPage}:any) => {
+const ClientCard = ({client, onViewDetails, onDownloadConfig, onRevokeClient, onOpenDetailPage}: any) => {
     console.log(onOpenDetailPage)
     const statusColor = client.connected ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800";
     const statusIcon = client.connected ? <Wifi size={16}/> : <WifiOff size={16}/>;
@@ -153,59 +154,61 @@ const ClientCard = ({client, onViewDetails, onDownloadConfig, onRevokeClient, on
 };
 
 // Empty state component
-const EmptyState = ({searchActive, onClearFilters}:any) =>{
+const EmptyState = ({searchActive, onClearFilters}: any) => {
     const navigate = useNavigate()
-    return  (
-    <div className="bg-white rounded-lg shadow-md p-8 text-center">
-        <div className="flex flex-col items-center justify-center">
-            {searchActive ? (
-                <>
-                    <div className="text-gray-400 mb-4 p-4 bg-gray-50 rounded-full">
-                        <WifiOff size={48}/>
-                    </div>
-                    <h3 className="text-xl font-medium text-gray-700 mb-2">No clients found</h3>
-                    <p className="text-gray-500 mb-6 max-w-md">
-                        No clients match your current search or filter criteria. Try adjusting your search parameters.
-                    </p>
-                    <button
-                        onClick={onClearFilters}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
-                        Clear Filters
-                    </button>
-                </>
-            ) : (
-                <>
-                    <div className="mb-6 relative">
-                        <div className="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center">
-                            <Wifi size={48} className="text-blue-500"/>
+    return (
+        <div className="bg-white rounded-lg shadow-md p-8 text-center">
+            <div className="flex flex-col items-center justify-center">
+                {searchActive ? (
+                    <>
+                        <div className="text-gray-400 mb-4 p-4 bg-gray-50 rounded-full">
+                            <WifiOff size={48}/>
                         </div>
-                        <div
-                            className="absolute top-0 right-0 animate-ping w-6 h-6 bg-green-400 rounded-full opacity-75"></div>
-                        <div
-                            className="absolute bottom-0 left-0 animate-ping delay-300 w-4 h-4 bg-blue-400 rounded-full opacity-75"></div>
-                    </div>
-                    <h3 className="text-xl font-medium text-gray-700 mb-2">No VPN clients yet</h3>
-                    <p className="text-gray-500 mb-6 max-w-md">
-                        Get started by creating your first VPN client. Once created, you'll be able to manage all your
-                        clients from this dashboard.
-                    </p>
-                    <button
-                        onClick={()=>{
-                            navigate("/clients/create")
-                        }}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors">
-                        <Plus size={18}/>
-                        Create Your First Client
-                    </button>
-                </>
-            )}
+                        <h3 className="text-xl font-medium text-gray-700 mb-2">No clients found</h3>
+                        <p className="text-gray-500 mb-6 max-w-md">
+                            No clients match your current search or filter criteria. Try adjusting your search
+                            parameters.
+                        </p>
+                        <button
+                            onClick={onClearFilters}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
+                            Clear Filters
+                        </button>
+                    </>
+                ) : (
+                    <>
+                        <div className="mb-6 relative">
+                            <div className="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center">
+                                <Wifi size={48} className="text-blue-500"/>
+                            </div>
+                            <div
+                                className="absolute top-0 right-0 animate-ping w-6 h-6 bg-green-400 rounded-full opacity-75"></div>
+                            <div
+                                className="absolute bottom-0 left-0 animate-ping delay-300 w-4 h-4 bg-blue-400 rounded-full opacity-75"></div>
+                        </div>
+                        <h3 className="text-xl font-medium text-gray-700 mb-2">No VPN clients yet</h3>
+                        <p className="text-gray-500 mb-6 max-w-md">
+                            Get started by creating your first VPN client. Once created, you'll be able to manage all
+                            your
+                            clients from this dashboard.
+                        </p>
+                        <button
+                            onClick={() => {
+                                navigate("/clients/create")
+                            }}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors">
+                            <Plus size={18}/>
+                            Create Your First Client
+                        </button>
+                    </>
+                )}
+            </div>
         </div>
-    </div>
-)
+    )
 };
 
 // Search and filter component
-const SearchAndFilter = ({onSearch, onFilterChange, filter}:any) => (
+const SearchAndFilter = ({onSearch, onFilterChange, filter}: any) => (
     <div className="bg-white rounded-lg shadow-sm p-4 mb-6 flex flex-col sm:flex-row gap-4">
         <div className="relative flex-grow">
             <input
@@ -311,8 +314,8 @@ const VPNDashboard = () => {
     };
 
     const handleDownloadConfig = (client: VPNClient) => {
-        // Mock download action
-        alert(`Downloading configuration for ${client.name}`);
+        if (client.has_ovpn_file)
+            location.href = "/download/" + client.name
     };
 
     const handleRevokeClient = (client: VPNClient) => {
@@ -357,7 +360,7 @@ const VPNDashboard = () => {
                         </button>
                         <button
                             disabled={isLoading}
-                            onClick={()=>{
+                            onClick={() => {
                                 navigate("/clients/create")
                             }}
                             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition-colors disabled:opacity-50">

@@ -439,7 +439,7 @@ def init_api(app: Flask):
         return jsonify(info)
 
     @bp.route('/api/client_list', methods=["GET", "POST"])
-    # @login_required
+    @login_required
     def client_list():
         # Get basic server information
         info = vpn_manager.get_user_list()
