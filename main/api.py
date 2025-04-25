@@ -442,7 +442,7 @@ def init_api(app: Flask):
     # @login_required
     def client_list():
         # Get basic server information
-        info = vpn_manager.get_users()
+        info = vpn_manager.get_user_list()
         return jsonify(info or [])
 
     @bp.route('/api/traffic_data', methods=["POST"])
