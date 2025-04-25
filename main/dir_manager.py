@@ -111,6 +111,7 @@ class VPNManager:
             sanitized_client,
             "nopass"
         ], check=True)
+        print(f"Certificate generated for {sanitized_client}")
 
         common = cls.get("server", "client-common.txt")
         ca = cls.get("server", "easy-rsa", "pki", "ca.crt")
@@ -124,7 +125,6 @@ class VPNManager:
                               capture_output=True).stdout
 
         key = key.read_text()
-
         tls_cmd = f"sed -ne '/BEGIN OpenVPN Static key/,$ p' {cls.get('server', 'ta.key')}"
         tls = subprocess.run(tls_cmd, shell=True, check=True, text=True, capture_output=True).stdout
         template = render_template("cert.ovpn",
@@ -133,6 +133,7 @@ class VPNManager:
                                    key=key.strip(),
                                    tls=False,
                                    ip=remote_ip)
+        print(f"Template rendered for {template}")
         cls.save_client(sanitized_client, template)
         os.chdir(current_dir)
         return True
