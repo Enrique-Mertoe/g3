@@ -41,7 +41,7 @@ def client_view(name):
     return render_template("index.html")
 
 @app.route("/clients")
-def clients(name):
+def clients():
     return render_template("index.html")
 
 
