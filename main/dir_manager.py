@@ -101,6 +101,7 @@ class VPNManager:
         ersa = cls.get("server", "easy-rsa")
         if not ersa.exists():
             raise PathError
+        current_dir = os.getcwd()
         os.chdir(ersa)
         subprocess.run([
             "./easyrsa",
@@ -133,6 +134,7 @@ class VPNManager:
                                    tls=tls.strip(),
                                    ip=remote_ip)
         cls.save_client(sanitized_client, template)
+        os.chdir(current_dir)
         return True
 
     @classmethod

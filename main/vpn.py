@@ -3,6 +3,7 @@ import logging
 import os
 import re
 import socket
+import subprocess
 from typing import List, Dict, Any, Optional, Tuple
 
 from main.api_handlers import run_host_command
@@ -10,7 +11,7 @@ from main.cache import UserCacheRefresher
 from main.cache.user_cashe import UserCacheManager
 from main.config import ConfigManager
 from main.model_classes import VPNUser
-
+from .dir_manager import VPNManager as vpnM
 
 class VpnManager:
     """
@@ -780,36 +781,45 @@ class VpnManager:
             return False
         current_dir = os.getcwd()
         # Generate client certificate
-        try:
-            # Navigate to easy-rsa directory
+        # try:
+        #     # Navigate to easy-rsa directory
+        #
+        #     os.chdir(easy_rsa_dir)
+        #
+        #     # Source the vars file if it exists
+        #     if os.path.exists("vars"):
+        #         self._run_command(["source", "vars"])
+        #
+        #     # Generate client certificate
+        #     _, _, return_code = self._run_command([
+        #         "./easyrsa","--batch", "build-client-full", username, "nopass"
+        #     ])
+        #     subprocess.run([
+        #         "./easyrsa",
+        #         "--batch",
+        #         "--days=3650",
+        #         "build-client-full",
+        #         username,
+        #         "nopass"
+        #     ], check=True)
+        #
+        #     if return_code != 0:
+        #         self.logger.error(f"Failed to generate certificate for user {username}")
+        #         return False
+        #
+        #     # Create client configuration
+        #     self._create_client_config(username)
+        #
+        #     self.logger.info(f"Successfully created client {username}")
+        #     return True
+        # except Exception as e:
+        #     raise e
+        #     self.logger.error(f"Error creating client: {str(e)}")
+        #     return False
+        # finally:
+        vpnM.gen_cert(username)
+        return True
 
-            os.chdir(easy_rsa_dir)
-
-            # Source the vars file if it exists
-            if os.path.exists("vars"):
-                self._run_command(["source", "vars"])
-
-            # Generate client certificate
-            _, _, return_code = self._run_command([
-                "./easyrsa", "build-client-full", username, "nopass"
-            ])
-
-            if return_code != 0:
-                self.logger.error(f"Failed to generate certificate for user {username}")
-                return False
-
-            # Create client configuration
-            self._create_client_config(username)
-
-            self.logger.info(f"Successfully created client {username}")
-            return True
-        except Exception as e:
-            raise e
-            self.logger.error(f"Error creating client: {str(e)}")
-            return False
-        finally:
-            # Return to original directory
-            os.chdir(current_dir)
 
     def _create_client_config(self, username: str) -> None:
         """
