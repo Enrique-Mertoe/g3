@@ -8,6 +8,8 @@ from typing import List, Dict, Any, Optional, Tuple
 from main.api_handlers import run_host_command
 from main.cache import UserCacheRefresher
 from main.cache.user_cashe import UserCacheManager
+from main.config import ConfigManager
+from main.model_classes import VPNUser
 
 
 class VpnManager:
@@ -45,7 +47,11 @@ class VpnManager:
         self.user_cache = UserCacheManager()
         self.cache_refresher = UserCacheRefresher(self, self.user_cache)
         self.cache_refresher.start()
+        self.config_manager = ConfigManager(self.server_conf_dir)
         # Ensure the required directories exist and are accessible
+
+        self.cert_dir = os.path.join(self.config_dir, "server/easy-rsa/pki/issued")
+        self.crl_path = os.path.join(self.config_dir, "server/easy-rsa/pki/crl.pem")
         self._check_paths()
 
     def _check_paths(self) -> None:
@@ -572,6 +578,84 @@ class VpnManager:
 
         return users
 
+    def get_users(self) -> List[Dict[str, Any]]:
+        """Public method to get all VPN users as dictionaries"""
+        users = self._get_user_list_internal1()
+        return [user.to_dict() for user in users]
+
+    def _get_user_list_internal1(self) -> List[VPNUser]:
+        """
+        Internal method that does the actual work of getting the user list.
+        Returns a list of VPNUser objects.
+        """
+        users = []
+
+        if not os.path.exists(self.cert_dir):
+            self.logger.warning(f"Certificate directory not found: {self.cert_dir}")
+            return users
+
+        # Get revoked certificates list first (to avoid calling for each user)
+        revoked_users = set()
+        if os.path.exists(self.crl_path):
+            try:
+                stdout = self._run_command(["openssl", "crl", "-in", self.crl_path, "-text"])
+                # Extract all revoked certificate common names
+                revoked_matches = re.findall(
+                    r"Serial Number:.*?\n\s+Revocation Date:.*?\n\s+CRL entry extensions:.*?\n\s+X509v3 Subject Alternative Name:.*?\n\s+DNS:([\w\-]+)",
+                    stdout, re.DOTALL)
+                revoked_users = set(revoked_matches)
+            except Exception as e:
+                self.logger.error(f"Error reading CRL: {str(e)}")
+
+        try:
+            # Get certificate files
+            cert_files = [f for f in os.listdir(self.cert_dir) if f.endswith('.crt') and f != "server.crt"]
+
+            # Get active clients data once (to avoid repeated calls)
+            active_clients = {client["username"]: client for client in self.get_active_clients()}
+
+            for cert_file in cert_files:
+                username = cert_file[:-4]  # Remove .crt extension
+
+                try:
+                    # Create basic user with available data
+                    user = VPNUser(
+                        username=username,
+                        active=username not in revoked_users,
+                        created_at=self._get_certificate_creation_time(os.path.join(self.cert_dir, cert_file))
+                    )
+
+                    # Get certificate details
+                    cert_path = os.path.join(self.cert_dir, cert_file)
+                    stdout = self._run_command(["openssl", "x509", "-in", cert_path, "-text"])
+
+                    # Extract expiry date
+                    not_after_match = re.search(r"Not After\s*:\s*(.+)", stdout)
+                    if not_after_match:
+                        user.expiry_date = not_after_match.group(1).strip()
+
+                    # Get user's last connection from logs
+                    user.last_connected = self._get_last_connection_time(username)
+
+                    # Update with connection status if active
+                    if username in active_clients:
+                        client = active_clients[username]
+                        user.active = True
+                        user.ip = client["ip_address"]
+                        user.download = client["download"]
+                        user.upload = client["upload"]
+
+                    users.append(user)
+
+                except Exception as e:
+                    self.logger.error(f"Error processing certificate for {username}: {str(e)}")
+                    continue
+
+        except Exception as e:
+            self.logger.error(f"Error listing certificates: {str(e)}")
+
+        return users
+
     def get_user_list(self) -> List[Dict[str, Any]]:
         """
         Get list of all OpenVPN users (from certificates).
@@ -687,11 +771,11 @@ class VpnManager:
         if not os.path.exists(easy_rsa_dir):
             self.logger.error(f"easy-rsa directory not found: {easy_rsa_dir}")
             return False
-
+        current_dir = os.getcwd()
         # Generate client certificate
         try:
             # Navigate to easy-rsa directory
-            current_dir = os.getcwd()
+
             os.chdir(easy_rsa_dir)
 
             # Source the vars file if it exists
@@ -755,9 +839,9 @@ class VpnManager:
                 key_content = f.read()
 
             ta_content = ""
-            if os.path.exists(ta_path):
-                with open(ta_path, 'r') as f:
-                    ta_content = f.read()
+            # if os.path.exists(ta_path):
+            #     with open(ta_path, 'r') as f:
+            #         ta_content = f.read()
 
             # Generate client configuration
             client_config = f"""# Client configuration for {username}
@@ -769,9 +853,8 @@ resolv-retry infinite
 nobind
 persist-key
 persist-tun
-remote-cert-tls server
 cipher AES-256-CBC
-auth SHA256
+auth SHA1
 verb 3
 key-direction 1
 
@@ -1187,3 +1270,11 @@ key-direction 1
             "data_transfer": data_transfer,
             "security": security
         }
+
+    def apply_and_restart(self) -> Dict:
+        """Save configuration and restart the service"""
+        save_result = self.config_manager.save_config_to_file()
+        if save_result["status"] == "error":
+            return save_result
+
+        return self.restart_server()

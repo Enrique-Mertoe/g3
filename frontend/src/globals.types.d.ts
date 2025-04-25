@@ -147,3 +147,15 @@ declare type CompanyInfo = {
     email: string;
 };
 declare type Closure = (...args) => void;
+
+interface VPNClient {
+  name: string;
+  connected: boolean;
+  created: string;
+  ip: string;
+  last_seen: string;
+  transferUp: string;
+  transferDown: string;
+  bandwidth: string;
+  device: string;
+}

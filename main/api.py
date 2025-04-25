@@ -438,6 +438,13 @@ def init_api(app: Flask):
         info = vpn_manager.get_basic_info()
         return jsonify(info)
 
+    @bp.route('/api/client_list', methods=["GET", "POST"])
+    # @login_required
+    def client_list():
+        # Get basic server information
+        info = vpn_manager.get_users()
+        return jsonify(info or [])
+
     @bp.route('/api/traffic_data', methods=["POST"])
     @login_required
     def traffic_data():
@@ -585,7 +592,6 @@ def init_api(app: Flask):
         except Exception as e:
             app.logger.error(f"Error in update_openvpn_config: {str(e)}")
             return jsonify({'error': str(e)}), 500
-
 
     #     settings
     @bp.route('/api/vpn/settings', methods=['GET'])
@@ -778,4 +784,28 @@ def init_api(app: Flask):
 
             return jsonify({"error": str(e)}), 500
 
-    app.register_blueprint(bp,url_prefix="/")
+    @app.route('/api/settings', methods=['GET'])
+    def get_all_settings():
+        return jsonify(vpn_manager.config_manager.get_all_settings())
+
+    @bp.route('/api/settings/<section>', methods=['GET', 'PUT'])
+    def section_settings(section):
+        if request.method == 'GET':
+            return jsonify(vpn_manager.config_manager.get_section_settings(section))
+        elif request.method == 'PUT':
+            settings = request.form
+            return jsonify(vpn_manager.config_manager.update_section_settings(section, settings))
+
+    @bp.route('/api/templates', methods=['GET'])
+    def get_templates():
+        return jsonify({"templates": vpn_manager.config_manager.get_templates()})
+
+    @bp.route('/api/templates/apply/<template_name>', methods=['POST'])
+    def apply_template(template_name):
+        return jsonify(vpn_manager.config_manager.apply_template(template_name))
+
+    @bp.route('/api/apply', methods=['POST'])
+    def apply_config():
+        return jsonify(vpn_manager.apply_and_restart())
+
+    app.register_blueprint(bp, url_prefix="/")

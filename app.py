@@ -31,6 +31,20 @@ def security_view():
     return render_template("index.html")
 
 
+@app.route("/clients/create")
+def client_create():
+    return render_template("index.html")
+
+
+@app.route("/client/<name>")
+def client_view(name):
+    return render_template("index.html")
+
+@app.route("/clients")
+def clients(name):
+    return render_template("index.html")
+
+
 @app.route('/mikrotik/openvpn/create_provision/<provision_identity>', methods=["POST"])
 def mtk_create_new_provision(provision_identity):
     """Create a new openVPN client with given name.

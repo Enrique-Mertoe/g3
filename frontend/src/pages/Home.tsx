@@ -9,11 +9,14 @@ import {
     Legend, LineElement, Filler, PointElement
 } from 'chart.js';
 import {Line} from "react-chartjs-2";
+import {useDialog} from "../ui/providers/DialogProvider.tsx";
+import CreateClient from "../ui/CreateClient.tsx";
 
 ChartJS.register(LineElement, CategoryScale, LinearScale, PointElement, Filler, Legend, Tooltip);
 
 export default function HomePage() {
     const [cardsData, setCardsData] = useState<HTopData | null>(null);
+    const dialog = useDialog()
     useEffect(() => {
         $.post<HTopData>({url: "/api/basic-info", data: {}})
             .then(res => {
@@ -50,6 +53,11 @@ export default function HomePage() {
                                     <span className="text-sm">Restart Server</span>
                                 </button>
                                 <button
+                                    onClick={() => {
+                                        dialog.create({
+                                            content: <CreateClient/>
+                                        })
+                                    }}
                                     className="flex flex-col items-center justify-center bg-green-50 hover:bg-green-100 text-green-700 p-4 rounded-lg">
                                     <i className="fas fa-user-plus text-2xl mb-2"></i>
                                     <span className="text-sm">Add Client</span>
@@ -106,7 +114,8 @@ const HTop = ({info}: { info: HTopData | null }) => {
                     </div>
                     <p className="text-xs text-gray-500">
                         {isLoading ?
-                            <div className="w-28 h-3 bg-gray-200 mt-1 rounded-md"></div> : `Uptime: ${info?.server.uptime}`}
+                            <div
+                                className="w-28 h-3 bg-gray-200 mt-1 rounded-md"></div> : `Uptime: ${info?.server.uptime}`}
                     </p>
                 </div>
             </div>
@@ -386,7 +395,7 @@ const ActiveConnections = () => {
     const [connections, setConnections] = useState<ActiveConnection[]>([]);
 
     useEffect(() => {
-        $.post<ActiveConnection[]>({ url: "/api/active_connections", data: {} })
+        $.post<ActiveConnection[]>({url: "/api/active_connections", data: {}})
             .then(res => setConnections(res.data))
             .catch((err) => console.error("Failed to fetch active connections", err));
     }, []);
@@ -403,45 +412,51 @@ const ActiveConnections = () => {
             <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                     <thead>
-                        <tr>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IP Address</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Connected Since</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data Transfer</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                        </tr>
+                    <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IP
+                            Address
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Connected
+                            Since
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data
+                            Transfer
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                        {connections.map((conn, idx) => (
-                            <tr key={idx} className="hover:bg-gray-50">
-                                <td className="px-4 py-3 whitespace-nowrap">
-                                    <div className="flex items-center">
-                                        <img className="h-8 w-8 rounded-full" src="/api/placeholder/32/32" alt="User"/>
-                                        <div className="ml-3">
-                                            <div className="text-sm font-medium text-gray-900">{conn.username}</div>
-                                            <div className="text-xs text-gray-500">{conn.fullName}</div>
-                                        </div>
+                    {connections && connections.map((conn, idx) => (
+                        <tr key={idx} className="hover:bg-gray-50">
+                            <td className="px-4 py-3 whitespace-nowrap">
+                                <div className="flex items-center">
+                                    <img className="h-8 w-8 rounded-full" src="/api/placeholder/32/32" alt="User"/>
+                                    <div className="ml-3">
+                                        <div className="text-sm font-medium text-gray-900">{conn.username}</div>
+                                        <div className="text-xs text-gray-500">{conn.fullName}</div>
                                     </div>
-                                </td>
-                                <td className="px-4 py-3 text-sm text-gray-500">{conn.ipAddress}</td>
-                                <td className="px-4 py-3 text-sm text-gray-500">{conn.connectedSince}</td>
-                                <td className="px-4 py-3 text-sm text-gray-500">
-                                    <div className="flex items-center">
-                                        <span className="mr-1">↓</span>{conn.download}
-                                        <span className="mx-1">|</span>
-                                        <span className="mr-1">↑</span>{conn.upload}
-                                    </div>
-                                </td>
-                                <td className="px-4 py-3 text-sm">
-                                    <button className="text-indigo-600 hover:text-indigo-900 mr-2">
-                                        <i className="fas fa-info-circle"></i>
-                                    </button>
-                                    <button className="text-red-600 hover:text-red-900">
-                                        <i className="fas fa-times-circle"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
+                                </div>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-500">{conn.ipAddress}</td>
+                            <td className="px-4 py-3 text-sm text-gray-500">{conn.connectedSince}</td>
+                            <td className="px-4 py-3 text-sm text-gray-500">
+                                <div className="flex items-center">
+                                    <span className="mr-1">↓</span>{conn.download}
+                                    <span className="mx-1">|</span>
+                                    <span className="mr-1">↑</span>{conn.upload}
+                                </div>
+                            </td>
+                            <td className="px-4 py-3 text-sm">
+                                <button className="text-indigo-600 hover:text-indigo-900 mr-2">
+                                    <i className="fas fa-info-circle"></i>
+                                </button>
+                                <button className="text-red-600 hover:text-red-900">
+                                    <i className="fas fa-times-circle"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    ))}
                     </tbody>
                 </table>
             </div>

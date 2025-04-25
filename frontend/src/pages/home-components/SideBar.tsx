@@ -12,8 +12,8 @@ export default function SideBar() {
     const navItems: (NavItemType | "divider")[] = [
         {label: "Dashboard", icon: "bi-speedometer2", link: "/"},
         "divider",
-        {label: "Clients", icon: "bi-person-lines-fill", link: "/users", badge: usersCount},
-        {label: "Create Client", icon: "bi-person-plus-fill", link: "/users/create"},
+        {label: "Clients", icon: "bi-person-lines-fill", link: "/clients", badge: usersCount},
+        {label: "Create Client", icon: "bi-person-plus-fill", link: "/clients/create"},
         "divider",
         {label: "Server Logs", icon: "bi-file-earmark-text", link: "/server-logs"},
         {label: "Statistics", icon: "bi-bar-chart-line", link: "/statistics"},

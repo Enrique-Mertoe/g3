@@ -14,6 +14,8 @@ import RouterView from "./pages/RouterView.tsx";
 import PaymentAndBillingPage from "./pages/PaymentAndBillingPage.tsx";
 import SettingsPage from "./pages/SettingsPage.tsx";
 import SecurityPage from "./pages/SecurityPage.tsx";
+import CreateClient from "./ui/CreateClient.tsx";
+import ClientDetailPage from "./pages/ClientDetailPage.tsx";
 
 function RouterAwareApp() {
     const location = useLocation();
@@ -27,7 +29,9 @@ function RouterAwareApp() {
         <AppProvider>
             <Routes>
                 <Route path="/" element={<HomePage/>}/>
-                <Route path="/users/" element={<ClientsPage/>}/>
+                <Route path="/clients" element={<ClientsPage/>}/>
+                <Route path="/client/:name" element={<ClientDetailPage/>}/>
+                <Route path="/clients/create" element={<CreateClient/>}/>
                 <Route path="/isp/" element={<ISPPage/>}/>
                 <Route path="/packages/" element={<PackagesPage/>}/>
                 <Route path="/payments/" element={<PaymentAndBillingPage/>}/>
