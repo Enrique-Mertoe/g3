@@ -2,6 +2,8 @@ import os
 
 from flask import Flask, jsonify, render_template
 from flask_cors import CORS
+from flask import Flask, send_file, make_response, jsonify
+from io import StringIO
 import socket
 import settings
 from main.admin.routes import init
@@ -91,6 +93,10 @@ def run_host_command(command):
     finally:
         executor.close()
 
+
+@app.route('/mikrotik/openvpn/<client_name>')
+def get_client_config(client_name):
+    return VPNManager.download_client_config(client_name)
 
 # # Example usage in your app
 # def restart_nginx():

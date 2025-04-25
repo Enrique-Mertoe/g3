@@ -4,7 +4,10 @@ import re
 import subprocess
 from pathlib import Path
 import socket
-
+from flask import send_file, abort, Response
+import os
+from pathlib import Path
+import mimetypes
 
 from flask import render_template
 
@@ -14,6 +17,39 @@ from main.exceptions import PathError
 
 class VPNManager:
     BASE = settings.VPN_DIR
+
+    
+    def download_client_config(client_name):
+        """
+        Takes a client name and returns the .ovpn file for automatic download
+        
+        Usage example: /download_config/Alpha1_Ndesa1150415666
+        """
+        try:
+            # Sanitize the client name to prevent path traversal attacks
+            if not client_name or '../' in client_name or '/' in client_name:
+                abort(400, "Invalid client name")
+                
+            # Get the path to the client's .ovpn file
+            client_file = settings.VPN_DIR.joinpath("client", f"{client_name}.ovpn")
+            
+            # Check if the file exists
+            if not client_file.exists() or not client_file.is_file():
+                abort(404, f"Client configuration for {client_name} not found")
+                
+            # Set the correct MIME type for .ovpn files
+            mimetype = "application/x-openvpn-profile"
+            
+            # Return the file for download with the proper filename
+            return send_file(
+                client_file,
+                mimetype=mimetype,
+                as_attachment=True,
+                download_name=f"{client_name}.ovpn"
+            )
+            
+        except Exception as e:
+            abort(500, f"Error processing request: {str(e)}")
 
     @classmethod
     def get(cls, *path):
