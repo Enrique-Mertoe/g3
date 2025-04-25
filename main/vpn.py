@@ -763,12 +763,14 @@ class VpnManager:
             True if successful, False otherwise
         """
         if not username:
+            raise  "No user"
             return False
 
         # Check if the username already exists
         users = self.get_user_list()
         if any(user["username"] == username for user in users):
             self.logger.warning(f"User {username} already exists")
+            raise "User exists"
             return False
 
         # Change to easy-rsa directory
@@ -802,6 +804,7 @@ class VpnManager:
             self.logger.info(f"Successfully created client {username}")
             return True
         except Exception as e:
+            raise e
             self.logger.error(f"Error creating client: {str(e)}")
             return False
         finally:
