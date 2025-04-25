@@ -774,7 +774,7 @@ class VpnManager:
             return False
 
         # Change to easy-rsa directory
-        easy_rsa_dir = os.path.join(self.config_dir, "easy-rsa")
+        easy_rsa_dir = os.path.join(self.server_conf_dir, "easy-rsa")
         if not os.path.exists(easy_rsa_dir):
             self.logger.error(f"easy-rsa directory not found: {easy_rsa_dir}")
             return False
