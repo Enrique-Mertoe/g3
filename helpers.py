@@ -163,6 +163,7 @@ def execute_routeros_command(
             "message": f"RouterOS fatal error: {str(e)}"
         }
     except Exception as e:
+        raise
         logger.exception("Unexpected error")
         return {
             "status": "error",
