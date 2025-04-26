@@ -17,9 +17,115 @@ from main.exceptions import PathError
 
 class VPNManager:
     BASE = settings.VPN_DIR
-
     
-    def download_client_config(client_name):
+    @classmethod
+    def getIpAddress(cls,provision_identity):
+        """Get client IP from OpenVPN status log file"""
+        try:
+            print(f"Getting IP for provision_identity: {provision_identity}")
+            
+            # Path to the OpenVPN status log file
+            status_file = "/var/log/openvpn/openvpn-status.log"
+            
+            if not os.path.exists(status_file):
+                print(f"OpenVPN status file not found at {status_file}")
+                return jsonify({"error": "OpenVPN status file not found"}), 404
+                
+            # Read and parse the status file
+            with open(status_file, 'r') as f:
+                content = f.read()
+                
+            print("\nOpenVPN Status Log Content:")
+            print("-" * 50)
+            print(content)
+            print("-" * 50)
+            
+            # Re-read for actual parsing
+            with open(status_file, 'r') as f:
+                lines = f.readlines()
+            
+            # Find both CLIENT_LIST and ROUTING_TABLE sections
+            client_list_section = False
+            routing_table_section = False
+            headers = {}
+            
+            for line in lines:
+                line = line.strip()
+                
+                # Detect section headers
+                if line.startswith("HEADER,CLIENT_LIST,"):
+                    client_headers = line.split(',')[2:]  # Skip "HEADER" and "CLIENT_LIST"
+                    headers["CLIENT_LIST"] = client_headers
+                    client_list_section = True
+                    routing_table_section = False
+                    continue
+                    
+                if line.startswith("HEADER,ROUTING_TABLE,"):
+                    routing_headers = line.split(',')[2:]  # Skip "HEADER" and "ROUTING_TABLE"
+                    headers["ROUTING_TABLE"] = routing_headers
+                    routing_table_section = True
+                    client_list_section = False
+                    continue
+                    
+                # Process CLIENT_LIST entries
+                if line.startswith("CLIENT_LIST,"):
+                    parts = line.split(',')
+                    if len(parts) > 1:
+                        common_name = parts[1]
+                        real_address = parts[2].split(':')[0] if len(parts) > 2 else None
+                        virtual_address = parts[3] if len(parts) > 3 else None
+                        
+                        print(f"Client entry - Common Name: '{common_name}', Real Address: '{real_address}', Virtual: '{virtual_address}'")
+                        
+                        # Try to match by common name
+                        if common_name == provision_identity:
+                            ip = virtual_address if virtual_address and virtual_address.strip() else real_address
+                            print(f"Found client match by common name: {provision_identity}, IP: {ip}")
+                            return jsonify({"ip": ip}), 200
+                            
+                # Process ROUTING_TABLE entries
+                if line.startswith("ROUTING_TABLE,"):
+                    parts = line.split(',')
+                    if len(parts) > 2:
+                        virtual_address = parts[1]
+                        common_name = parts[2]
+                        
+                        print(f"Routing entry - Virtual Address: '{virtual_address}', Common Name: '{common_name}'")
+                        
+                        # Try to match by common name
+                        if common_name == provision_identity:
+                            print(f"Found routing match by common name: {provision_identity}, IP: {virtual_address}")
+                            return jsonify({"ip": virtual_address}), 200
+            
+            # If client is not found in the standard entries, let's check if there's any connection with a matching IP
+            # This is a fallback for non-standard configurations
+            for line in lines:
+                line = line.strip()
+                parts = line.split(',')
+                
+                # Look for any line that contains the provision identity
+                if provision_identity in line:
+                    print(f"Found line containing '{provision_identity}': {line}")
+                    
+                    # Extract IP-like strings from the line
+                    import re
+                    ip_pattern = r'\b(?:\d{1,3}\.){3}\d{1,3}\b'
+                    ips = re.findall(ip_pattern, line)
+                    
+                    if ips:
+                        print(f"Found potential IP(s) in line containing '{provision_identity}': {ips}")
+                        return jsonify({"ip": ips[0]}), 200
+            
+            print(f"\nNo client found with provision_identity: {provision_identity}")
+            return jsonify({"error": "Client not connected"}), 404
+            
+        except Exception as e:
+            print(f"Error reading status file: {str(e)}")
+            return jsonify({"error": f"Error reading status file: {str(e)}"}), 500
+
+
+    @classmethod
+    def download_client_config(cls, client_name):
         """
         Takes a client name and returns the .ovpn file for automatic download
         

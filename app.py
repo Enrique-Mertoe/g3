@@ -98,6 +98,15 @@ def run_host_command(command):
 def get_client_config(client_name):
     return VPNManager.download_client_config(client_name)
 
+
+
+@app.route('/mikrotik/openvpn/client_ip/<client_name>')
+def get_client_ip(client_name):
+    return VPNManager.getIpAddress(client_name)
+
+
+
+
 # # Example usage in your app
 # def restart_nginx():
 #     return run_host_command("systemctl restart nginx")
