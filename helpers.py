@@ -88,7 +88,7 @@ def execute_routeros_command(
 
         # Get the API endpoint
         api = connection.path(api_path) if api_path else connection.path()
-
+        print(api,'onnection established')
         # Execute the operation
         if operation == "print":
             # For print operations, we might need to filter
