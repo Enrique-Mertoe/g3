@@ -102,10 +102,16 @@ def get_client_config(client_name):
 
 @app.route('/mikrotik/openvpn/client_ip/<client_name>')
 def get_client_ip(client_name):
-    return VPNManager.getIpAddress(client_name)
-
-
-
+    try:
+        ip = VPNManager.getIpAddress(client_name)
+        if ip:
+            return ip
+        else:
+            return None  # or raise ValueError("Client not connected")
+    except Exception as e:
+        # Handle or re-raise the exception as needed
+        print(f"Error getting client IP: {str(e)}")
+        return None  # or raise
 
 # # Example usage in your app
 # def restart_nginx():

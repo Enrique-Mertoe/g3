@@ -19,7 +19,7 @@ class VPNManager:
     BASE = settings.VPN_DIR
     
     @classmethod
-    def getIpAddress(cls,provision_identity):
+    def getIpAddress(cls, provision_identity):
         """Get client IP from OpenVPN status log file"""
         try:
             print(f"Getting IP for provision_identity: {provision_identity}")
@@ -29,7 +29,7 @@ class VPNManager:
             
             if not os.path.exists(status_file):
                 print(f"OpenVPN status file not found at {status_file}")
-                return jsonify({"error": "OpenVPN status file not found"}), 404
+                raise FileNotFoundError("OpenVPN status file not found")
                 
             # Read and parse the status file
             with open(status_file, 'r') as f:
@@ -81,7 +81,7 @@ class VPNManager:
                         if common_name == provision_identity:
                             ip = virtual_address if virtual_address and virtual_address.strip() else real_address
                             print(f"Found client match by common name: {provision_identity}, IP: {ip}")
-                            return jsonify({"ip": ip}), 200
+                            return ip
                             
                 # Process ROUTING_TABLE entries
                 if line.startswith("ROUTING_TABLE,"):
@@ -95,13 +95,12 @@ class VPNManager:
                         # Try to match by common name
                         if common_name == provision_identity:
                             print(f"Found routing match by common name: {provision_identity}, IP: {virtual_address}")
-                            return jsonify({"ip": virtual_address}), 200
+                            return virtual_address
             
             # If client is not found in the standard entries, let's check if there's any connection with a matching IP
             # This is a fallback for non-standard configurations
             for line in lines:
                 line = line.strip()
-                parts = line.split(',')
                 
                 # Look for any line that contains the provision identity
                 if provision_identity in line:
@@ -114,16 +113,16 @@ class VPNManager:
                     
                     if ips:
                         print(f"Found potential IP(s) in line containing '{provision_identity}': {ips}")
-                        return jsonify({"ip": ips[0]}), 200
+                        return ips[0]
             
             print(f"\nNo client found with provision_identity: {provision_identity}")
-            return jsonify({"error": "Client not connected"}), 404
+            return None
             
         except Exception as e:
             print(f"Error reading status file: {str(e)}")
-            return jsonify({"error": f"Error reading status file: {str(e)}"}), 500
+            raise
 
-
+            
     @classmethod
     def download_client_config(cls, client_name):
         """
