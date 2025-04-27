@@ -94,19 +94,15 @@ def setup_pppoe_server(router_api, params, mtk: MTK):
 
     # 3. Enable PPPoE server on interface
     pppoe_server_resource = router_api.get_resource('/interface/pppoe-server/server')
-    existing_pppoe = pppoe_server_resource.get(name="pppoe-LomTech")
-    if existing_pppoe:
-        pppoe_server_resource.set(id=existing_pppoe[0]['.id'], disabled="no")
-    else:
-        interface = mtk.bridge(params["ports"])
-        pppoe_server_resource.add(
-            name="pppoe-LomTech",
-            service_name=f"pppoe-{interface}",
-            interface=interface,
-            default_profile=f"default-{MTK.server_id}",
-            disabled="no",
-            one_session_per_host="yes",
-        )
+    interface = mtk.bridge(params["ports"])
+    pppoe_server_resource.add(
+        name="pppoe-LomTech",
+        service_name=f"pppoe-{interface}",
+        interface=interface,
+        default_profile=f"default-{MTK.server_id}",
+        disabled="no",
+        one_session_per_host="yes",
+    )
 
     return {"message": f"PPPoE server set up successfully on {params['interface']}"}
 
