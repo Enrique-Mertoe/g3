@@ -17,7 +17,7 @@ def authenticate_request(data):
 
 def connect_to_router(router_credentials):
     """Create a connection to the MikroTik router"""
-    host = VPNManager.getIpAddress(router_credentials["ip"])
+    host = VPNManager.getIpAddress(router_credentials["host"])
     connection = routeros_api.RouterOsApiPool(
         host=host,
         username=router_credentials["username"],
