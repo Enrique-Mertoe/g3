@@ -7,6 +7,10 @@ from main.dir_manager import VPNManager
 VALID_API_KEYS = {os.environ.get("API_KEY", "test-api-key")}
 
 
+class MTK:
+    conn: None | routeros_api.RouterOsApiPool = None
+
+
 def authenticate_request(data):
     """Validate the API key from the request"""
     api_key = data.get("api_key")
@@ -24,6 +28,7 @@ def connect_to_router(router_credentials):
         password=router_credentials["password"],
         plaintext_login=True
     )
+    MTK.conn = connection
     return connection.get_api()
 
 
