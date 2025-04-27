@@ -96,7 +96,6 @@ def setup_pppoe_server(router_api, params, mtk: MTK):
     pppoe_server_resource = router_api.get_resource('/interface/pppoe-server/server')
     interface = mtk.bridge(params["ports"])
     pppoe_server_resource.add(
-        name="pppoe-LomTech",
         service_name=f"pppoe-{interface}",
         interface=interface,
         default_profile=f"default-{MTK.server_id}",
