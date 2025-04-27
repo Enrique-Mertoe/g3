@@ -8,7 +8,7 @@ from main.mtk.mtk_utility import authenticate_request, setup_pppoe_server, add_c
 
 
 def init_mtk(app: Flask):
-    @app.route("/mikrotik", methods=["POST"])
+    @app.route("/mtk/console", methods=["POST"])
     def mikrotik_command():
         data = request.json
 

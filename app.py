@@ -13,8 +13,8 @@ from main.api import init_api
 from main.command import CommandExecutor
 from main.dir_manager import VPNManager
 from main.middleware import init_middleware
+from main.mtk import init_mtk
 from radius_manager import RadiusClientManager
-
 
 app = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__), 'frontend', "dist"),
             static_folder=os.path.join(os.path.dirname(__file__), 'frontend', "dist", "static")
@@ -270,8 +270,6 @@ def routeros_bulk_api_endpoint():
         }), 500
 
 
-
-
 # RADIUS Client API Routes
 @app.route('/api/radius/clients', methods=['GET'])
 def get_radius_clients():
@@ -282,17 +280,18 @@ def get_radius_clients():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
+
 @app.route('/api/radius/clients', methods=['POST'])
 def add_radius_client():
     """Add a new RADIUS client."""
     data = request.json
-    
+
     # Validate required fields
     required_fields = ['name', 'ipaddr', 'secret']
     for field in required_fields:
         if field not in data:
             return jsonify({"status": "error", "message": f"Missing required field: {field}"}), 400
-    
+
     # Add the client
     success, message = radius_manager.add_client(
         name=data['name'],
@@ -300,17 +299,18 @@ def add_radius_client():
         secret=data['secret'],
         nastype=data.get('nastype', 'other')
     )
-    
+
     if success:
         return jsonify({"status": "success", "message": message})
     else:
         return jsonify({"status": "error", "message": message}), 400
 
+
 @app.route('/api/radius/clients/<client_name>', methods=['PUT'])
 def update_radius_client(client_name):
     """Update an existing RADIUS client."""
     data = request.json
-    
+
     # Update the client
     success, message = radius_manager.update_client(
         name=client_name,
@@ -318,21 +318,24 @@ def update_radius_client(client_name):
         secret=data.get('secret'),
         nastype=data.get('nastype')
     )
-    
+
     if success:
         return jsonify({"status": "success", "message": message})
     else:
         return jsonify({"status": "error", "message": message}), 404
+
 
 @app.route('/api/radius/clients/<client_name>', methods=['DELETE'])
 def delete_radius_client(client_name):
     """Delete a RADIUS client."""
     success, message = radius_manager.delete_client(client_name)
-    
+
     if success:
         return jsonify({"status": "success", "message": message})
     else:
         return jsonify({"status": "error", "message": message}), 404
 
+
+init_mtk(app)
 if __name__ == '__main__':
     app.run()
