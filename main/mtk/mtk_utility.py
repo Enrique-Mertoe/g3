@@ -31,10 +31,11 @@ class MTK:
                             comment=f"Default bridge for {self.server_id}")
         irs = self.api.get_resource("/interface/bridge/port")
         for interface in lan_interfaces:
-            irs.add(
-                interface=interface,
-                bridge=bridge_name
-            )
+            if not irs.get(interface=interface):
+                irs.add(
+                    interface=interface,
+                    bridge=bridge_name
+                )
 
         # Set IP on bridge
         iip = self.api.get_resource("/ip/address")
