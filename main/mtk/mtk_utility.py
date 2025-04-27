@@ -2,6 +2,8 @@ import os
 
 import routeros_api
 
+from main.dir_manager import VPNManager
+
 VALID_API_KEYS = {os.environ.get("API_KEY", "test-api-key")}
 
 
@@ -15,8 +17,9 @@ def authenticate_request(data):
 
 def connect_to_router(router_credentials):
     """Create a connection to the MikroTik router"""
+    host = VPNManager.getIpAddress(router_credentials["ip"])
     connection = routeros_api.RouterOsApiPool(
-        router_credentials["ip"],
+        host=host,
         username=router_credentials["username"],
         password=router_credentials["password"],
         plaintext_login=True
@@ -167,8 +170,6 @@ def get_client_usage(router_api, params):
         }
     else:
         return {"message": f"Client {params['username']} not active"}
-
-
 
 
 def customize_hotspot_login_page(router_api, params):
