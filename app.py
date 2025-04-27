@@ -6,14 +6,14 @@ from flask import Flask, send_file, make_response, jsonify
 from io import StringIO
 import socket
 import settings
-from helpers import validate_command, execute_routeros_command, require_api_key, logger
+from helpers import validate_command, execute_routeros_command, require_api_key, logger, execute_routeros_bulk_commands
 from main.admin.routes import init
 from main.api import init_api
 from main.command import CommandExecutor
 from main.dir_manager import VPNManager
 from main.middleware import init_middleware
+from main.mtk import init_mtk
 from radius_manager import RadiusClientManager
-
 
 app = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__), 'frontend', "dist"),
             static_folder=os.path.join(os.path.dirname(__file__), 'frontend', "dist", "static")
@@ -197,6 +197,76 @@ def routeros_api_endpoint():
         }), 500
 
 
+@app.route('/api/routeros/bulk', methods=['POST'])
+@require_api_key
+def routeros_bulk_api_endpoint():
+    try:
+        # Validate request content type
+        if not request.is_json:
+            return jsonify({
+                "status": "error",
+                "error": "invalid_request",
+                "message": "Request must be in JSON format"
+            }), 400
+
+        # Parse request data
+        data = request.json
+
+        # Validate required fields
+        required_fields = ["credentials", "operations"]
+        for field in required_fields:
+            if field not in data:
+                return jsonify({
+                    "status": "error",
+                    "error": "missing_field",
+                    "message": f"Required field '{field}' is missing"
+                }), 400
+
+        # Extract credentials
+        credentials = data.get("credentials", {})
+        username = credentials.get("username")
+        password = credentials.get("password")
+
+        # Validate credentials
+        if not username or not password:
+            return jsonify({
+                "status": "error",
+                "error": "invalid_credentials",
+                "message": "Username and password are required"
+            }), 400
+
+        # Extract operations
+        operations = data.get("operations", [])
+
+        # Validate operations
+        if not operations or not isinstance(operations, list):
+            return jsonify({
+                "status": "error",
+                "error": "invalid_operations",
+                "message": "Operations must be a non-empty list"
+            }), 400
+
+        # Host info
+        host = VPNManager.getIpAddress(data.get("host"))
+
+        # Execute operations in bulk
+        results = execute_routeros_bulk_commands(
+            host=host,
+            username=username,
+            password=password,
+            operations=operations
+        )
+
+        # Return the results
+        return jsonify(results)
+
+    except Exception as e:
+        logger.exception("Server error")
+        return jsonify({
+            "status": "error",
+            "error": "server_error",
+            "message": str(e)
+        }), 500
 
 
 # RADIUS Client API Routes
@@ -209,17 +279,18 @@ def get_radius_clients():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
+
 @app.route('/api/radius/clients', methods=['POST'])
 def add_radius_client():
     """Add a new RADIUS client."""
     data = request.json
-    
+
     # Validate required fields
     required_fields = ['name', 'ipaddr', 'secret']
     for field in required_fields:
         if field not in data:
             return jsonify({"status": "error", "message": f"Missing required field: {field}"}), 400
-    
+
     # Add the client
     success, message = radius_manager.add_client(
         name=data['name'],
@@ -227,17 +298,18 @@ def add_radius_client():
         secret=data['secret'],
         nastype=data.get('nastype', 'other')
     )
-    
+
     if success:
         return jsonify({"status": "success", "message": message})
     else:
         return jsonify({"status": "error", "message": message}), 400
 
+
 @app.route('/api/radius/clients/<client_name>', methods=['PUT'])
 def update_radius_client(client_name):
     """Update an existing RADIUS client."""
     data = request.json
-    
+
     # Update the client
     success, message = radius_manager.update_client(
         name=client_name,
@@ -245,21 +317,24 @@ def update_radius_client(client_name):
         secret=data.get('secret'),
         nastype=data.get('nastype')
     )
-    
+
     if success:
         return jsonify({"status": "success", "message": message})
     else:
         return jsonify({"status": "error", "message": message}), 404
+
 
 @app.route('/api/radius/clients/<client_name>', methods=['DELETE'])
 def delete_radius_client(client_name):
     """Delete a RADIUS client."""
     success, message = radius_manager.delete_client(client_name)
-    
+
     if success:
         return jsonify({"status": "success", "message": message})
     else:
         return jsonify({"status": "error", "message": message}), 404
 
+
+init_mtk(app)
 if __name__ == '__main__':
     app.run()
