@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 
+from helpers import logger
 from main.mtk.mtk_utility import authenticate_request, setup_pppoe_server, add_client, remove_client, create_profile, \
     setup_hotspot_server, get_active_clients, get_client_usage, connect_to_router, customize_hotspot_login_page, \
     add_hotspot_user, generate_hotspot_vouchers, list_hotspot_users, remove_hotspot_user, create_hotspot_profile, \
@@ -71,6 +72,7 @@ def init_mtk(app: Flask):
             return jsonify({"success": True, "result": result})
 
         except Exception as e:
+            logger.exception("Server error")
             return jsonify({"success": False, "error": str(e)}), 500
         finally:
             # Close the connection to the router
