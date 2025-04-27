@@ -1,6 +1,10 @@
 import re
 import subprocess
 import os
+import logging
+
+logging.basicConfig(level=logging.INFO)
+
 
 class RadiusClientManager:
     def __init__(self, clients_conf_path='/etc/freeradius/3.0/clients.conf'):
@@ -125,11 +129,17 @@ client {name} {{
         self.restart_radius()
         
         return True, f"Client '{name}' deleted successfully"
-    
+
+
     def restart_radius(self):
-        """Restart the FreeRADIUS service."""
         try:
-            subprocess.run(['service', 'freeradius', 'restart'], check=True)            
-            return True, "FreeRADIUS restarted successfully"
+            subprocess.run(['reload_freeradius.sh'], check=True)
+            logging.info("FreeRADIUS reloaded")
+            return True, "FreeRADIUS reloaded"
         except subprocess.CalledProcessError as e:
-            return False, f"Failed to restart FreeRADIUS: {str(e)}"
+            logging.error(f"Reload failed: {e}")
+            return False, f"Reload failed: {e}"
+        except FileNotFoundError:
+            logging.error("reload_freeradius.sh not found")
+            return False, "reload_freeradius.sh not found"
+
