@@ -9,6 +9,40 @@ VALID_API_KEYS = {os.environ.get("API_KEY", "test-api-key")}
 
 class MTK:
     conn: None | routeros_api.RouterOsApiPool = None
+    server_id: str
+
+    def __init__(self, data):
+        self.data = data
+        self.api = connect_to_router(data["router"])
+        MTK.server_id = data["server_id"]
+
+    def bridge(self, lan_interfaces: list = None):
+        bridge_name = f"bridge-{self.server_id}"
+        # Fetch bridges
+        bridge_resource = self.api.get_resource('/interface/bridge')
+        bridges = bridge_resource.get()
+        existing = [b for b in bridges if b['name'] == bridge_name]
+        if existing:
+            return bridge_name
+
+        if lan_interfaces is None:
+            lan_interfaces = ["ether2", "ether3", "ether4"]
+        bridge_resource.add(name=bridge_name, protocol_mode="rstp",
+                            comment=f"Default bridge for {self.server_id}")
+        irs = self.api.get_resource("/interface/bridge/port")
+        for interface in lan_interfaces:
+            irs.add(
+                interface=interface,
+                bridge=bridge_name
+            )
+
+        # Set IP on bridge
+        iip = self.api.get_resource("/ip/address")
+        iip.add(
+            address="192.168.88.1/24",
+            interface=bridge_name
+        )
+        return bridge_name
 
 
 def authenticate_request(data):
@@ -19,7 +53,7 @@ def authenticate_request(data):
     return True
 
 
-def connect_to_router(router_credentials):
+def connect_to_router(router_credentials) -> routeros_api.api.RouterOsApi:
     """Create a connection to the MikroTik router"""
     host = VPNManager.getIpAddress(router_credentials["host"])
     connection = routeros_api.RouterOsApiPool(
@@ -33,27 +67,28 @@ def connect_to_router(router_credentials):
 
 
 # Action implementations
-def setup_pppoe_server(router_api, params):
+def setup_pppoe_server(router_api, params, mtk: MTK):
     """Set up a PPPoE server with required components"""
+    pool_name = f"pool-{MTK.server_id}"
     # 1. Create IP pool
     router_api.get_resource('/ip/pool').add(
-        name=params["ip_pool_name"],
+        name=pool_name,
         ranges=params["ip_pool_range"]
     )
 
     # 2. Set up PPP profile
     router_api.get_resource('/ppp/profile').add(
-        name=f"default-{params['ip_pool_name']}",
-        local_address=params["ip_pool_name"],
-        remote_address=params["ip_pool_name"],
+        name=f"default-{MTK.server_id}",
+        local_address=pool_name,
+        remote_address=pool_name,
         dns_server=",".join(params["dns_servers"])
     )
 
     # 3. Enable PPPoE server on interface
     router_api.get_resource('/interface/pppoe-server/server').add(
         service_name=f"pppoe-{params['interface']}",
-        interface=params["interface"],
-        default_profile=f"default-{params['ip_pool_name']}"
+        interface=mtk.bridge(params["ports"]),
+        default_profile=f"default-{MTK.server_id}"
     )
 
     return {"message": f"PPPoE server set up successfully on {params['interface']}"}

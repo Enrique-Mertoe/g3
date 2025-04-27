@@ -18,6 +18,7 @@ def init_mtk(app: Flask):
             return jsonify({"success": False, "error": "Invalid API key"}), 401
 
         try:
+            mtk = MTK(data)
             # Get the router connection
             router_api = connect_to_router(data["router"])
 
@@ -26,7 +27,7 @@ def init_mtk(app: Flask):
             params = data["params"]
 
             if action == "setup_pppoe_server":
-                result = setup_pppoe_server(router_api, params)
+                result = setup_pppoe_server(router_api, params, mtk)
 
             elif action == "customize_hotspot_login_page":
                 result = customize_hotspot_login_page(router_api, params)
