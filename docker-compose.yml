@@ -16,6 +16,6 @@ services:
       - /var/www/templates:/var/www/templates
       - /data/lomtechvpnaccess/ssh/keys:/app/ssh:ro
       - /etc/freeradius/3.0:/etc/freeradius/3.0  # Add this line
-     - /usr/local/bin/reload_freeradius.sh:/usr/local/bin/reload_freeradius.sh
+      - /usr/local/bin/reload_freeradius.sh:/usr/local/bin/reload_freeradius.sh
     environment:
       - HOST_SSH_KEY=/app/ssh/id_host_access
