@@ -129,7 +129,6 @@ client {name} {{
     def restart_radius(self):
         """Restart the FreeRADIUS service."""
         try:
-            subprocess.run(['systemctl', 'restart', 'freeradius'], check=True)
-            return True, "FreeRADIUS restarted successfully"
+            subprocess.run(['service', 'freeradius', 'restart'], check=True)            return True, "FreeRADIUS restarted successfully"
         except subprocess.CalledProcessError as e:
             return False, f"Failed to restart FreeRADIUS: {str(e)}"
