@@ -44,6 +44,17 @@ class MTK:
         )
         return bridge_name
 
+    def pool(self, ranges=None):
+        pool_name = f"pool-{MTK.server_id}"
+        pool_range = ranges or "192.168.100.10-192.168.100.100"
+        ip_pool_resource = self.api.get_resource('/ip/pool')
+        pools = ip_pool_resource.get()
+        # Check if pool exists
+        existing_pool = [p for p in pools if p['name'] == pool_name]
+        if existing_pool:
+            return pool_name
+        ip_pool_resource.add(name=pool_name, ranges=pool_range)
+
 
 def authenticate_request(data):
     """Validate the API key from the request"""
@@ -69,12 +80,7 @@ def connect_to_router(router_credentials) -> routeros_api.api.RouterOsApi:
 # Action implementations
 def setup_pppoe_server(router_api, params, mtk: MTK):
     """Set up a PPPoE server with required components"""
-    pool_name = f"pool-{MTK.server_id}"
-    # 1. Create IP pool
-    router_api.get_resource('/ip/pool').add(
-        name=pool_name,
-        ranges=params["ip_pool_range"]
-    )
+    pool_name = mtk.pool(params["ip_pool_range"])
 
     # 2. Set up PPP profile
     router_api.get_resource('/ppp/profile').add(
