@@ -163,10 +163,133 @@ def execute_routeros_command(
             "message": f"RouterOS fatal error: {str(e)}"
         }
     except Exception as e:
-        raise
         logger.exception("Unexpected error")
         return {
             "status": "error",
             "error": "execution_error",
+            "message": str(e)
+        }
+
+
+def execute_routeros_bulk_commands(
+        host: str,
+        username: str,
+        password: str,
+        operations: List[Dict]
+) -> Dict[str, Any]:
+    """
+    Execute multiple RouterOS commands in a single connection
+
+    Args:
+        host: Router hostname/IP
+        username: Router username
+        password: Router password
+        operations: List of operations (command + parameters)
+
+    Returns:
+        Dictionary with results for each operation
+    """
+    results = {
+        "status": "success",
+        "results": []
+    }
+
+    try:
+        # Connect to RouterOS API once for all operations
+        connection = librouteros.connect(
+            host=host,
+            username=username,
+            password=password,
+            port=CONFIG["router_port"],
+            timeout=CONFIG["connection_timeout"]
+        )
+
+        # Process each operation
+        for i, operation_data in enumerate(operations):
+            command = operation_data.get("command")
+            parameters = operation_data.get("parameters", {})
+
+            try:
+                # Parse command into path components
+                command_parts = parse_command(command)
+
+                # Get the API path
+                api_path = '/'.join(command_parts[:-1]) if len(command_parts) > 1 else ''
+
+                # Get the operation (last part of the command)
+                operation = command_parts[-1] if command_parts else "print"
+
+                # Get the API endpoint
+                api = connection.path(api_path) if api_path else connection.path()
+
+                # Execute the operation (similar to single command execution)
+                if operation == "print":
+                    if parameters:
+                        result = list(api.select(**parameters))
+                    else:
+                        result = list(api)
+                elif operation == "add":
+                    result = api.add(**parameters)
+                elif operation == "set" or operation == "edit":
+                    if ".id" not in parameters:
+                        result = {
+                            "status": "error",
+                            "error": "missing_id",
+                            "message": "The .id parameter is required for set operations"
+                        }
+                    else:
+                        item_id = parameters.pop(".id")
+                        api_item = api.get(id=item_id)[0]
+
+                        for key, value in parameters.items():
+                            api_item[key] = value
+
+                        api_item.update()
+                        result = {"updated": True, "id": item_id}
+                elif operation == "remove":
+                    if ".id" not in parameters:
+                        result = {
+                            "status": "error",
+                            "error": "missing_id",
+                            "message": "The .id parameter is required for remove operations"
+                        }
+                    else:
+                        item_id = parameters[".id"]
+                        api.remove(id=item_id)
+                        result = {"removed": True, "id": item_id}
+                else:
+                    result = {
+                        "status": "error",
+                        "error": "unsupported_operation",
+                        "message": f"Operation '{operation}' is not supported"
+                    }
+
+                # Add the result to our results list
+                results["results"].append({
+                    "index": i,
+                    "status": "success",
+                    "data": result
+                })
+
+            except Exception as op_error:
+                # Handle errors for individual operations
+                results["results"].append({
+                    "index": i,
+                    "status": "error",
+                    "error": type(op_error).__name__,
+                    "message": str(op_error)
+                })
+
+        # Close the connection
+        connection.close()
+
+        return results
+
+    except Exception as e:
+        # Handle connection errors
+        logger.exception("Bulk execution error")
+        return {
+            "status": "error",
+            "error": type(e).__name__,
             "message": str(e)
         }

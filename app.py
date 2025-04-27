@@ -7,7 +7,7 @@ from flask import Flask, send_file, make_response, jsonify
 from io import StringIO
 import socket
 import settings
-from helpers import validate_command, execute_routeros_command, require_api_key, logger
+from helpers import validate_command, execute_routeros_command, require_api_key, logger, execute_routeros_bulk_commands
 from main.admin.routes import init
 from main.api import init_api
 from main.command import CommandExecutor
@@ -188,6 +188,78 @@ def routeros_api_endpoint():
         else:
             logger.warning(f"Command execution failed: {result['error']} - {result['message']}")
             return jsonify(result), 500
+
+    except Exception as e:
+        logger.exception("Server error")
+        return jsonify({
+            "status": "error",
+            "error": "server_error",
+            "message": str(e)
+        }), 500
+
+
+@app.route('/api/routeros/bulk', methods=['POST'])
+@require_api_key
+def routeros_bulk_api_endpoint():
+    try:
+        # Validate request content type
+        if not request.is_json:
+            return jsonify({
+                "status": "error",
+                "error": "invalid_request",
+                "message": "Request must be in JSON format"
+            }), 400
+
+        # Parse request data
+        data = request.json
+
+        # Validate required fields
+        required_fields = ["credentials", "operations"]
+        for field in required_fields:
+            if field not in data:
+                return jsonify({
+                    "status": "error",
+                    "error": "missing_field",
+                    "message": f"Required field '{field}' is missing"
+                }), 400
+
+        # Extract credentials
+        credentials = data.get("credentials", {})
+        username = credentials.get("username")
+        password = credentials.get("password")
+
+        # Validate credentials
+        if not username or not password:
+            return jsonify({
+                "status": "error",
+                "error": "invalid_credentials",
+                "message": "Username and password are required"
+            }), 400
+
+        # Extract operations
+        operations = data.get("operations", [])
+
+        # Validate operations
+        if not operations or not isinstance(operations, list):
+            return jsonify({
+                "status": "error",
+                "error": "invalid_operations",
+                "message": "Operations must be a non-empty list"
+            }), 400
+
+        # Host info
+        host = VPNManager.getIpAddress(data.get("host"))
+
+        # Execute operations in bulk
+        results = execute_routeros_bulk_commands(
+            host=host,
+            username=username,
+            password=password,
+            operations=operations
+        )
+
+        # Return the results
+        return jsonify(results)
 
     except Exception as e:
         logger.exception("Server error")
