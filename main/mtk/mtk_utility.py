@@ -54,6 +54,7 @@ class MTK:
         if existing_pool:
             return pool_name
         ip_pool_resource.add(name=pool_name, ranges=pool_range)
+        return pool_name
 
 
 def authenticate_request(data):
