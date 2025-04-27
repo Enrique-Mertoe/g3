@@ -1,6 +1,5 @@
 import logging
 import os
-
 from flask import Flask, jsonify, render_template, request
 from flask_cors import CORS
 from flask import Flask, send_file, make_response, jsonify
