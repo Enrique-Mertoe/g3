@@ -58,6 +58,63 @@ class MTK:
         return pool_name
 
 
+def convert_to_seconds(time_str):
+    """
+    Convert a time string in format like "30 days", "45 minutes", "2 months" to seconds.
+    
+    Args:
+        time_str (str): Time string in format "<number> <unit>" where unit can be 
+                       "minute(s)", "day(s)", or "month(s)"
+    
+    Returns:
+        int: Time converted to seconds
+    
+    Examples:
+        >>> convert_to_seconds("30 days")
+        2592000
+        >>> convert_to_seconds("45 minutes")
+        2700
+        >>> convert_to_seconds("2 months")
+        5184000
+    """
+    if not time_str or not isinstance(time_str, str):
+        return 0
+    
+    # Split the string to get the number and unit
+    parts = time_str.strip().split()
+    if len(parts) < 2:
+        return 0
+    
+    try:
+        value = float(parts[0])
+        unit = parts[1].lower()
+        
+        # Normalize unit (handle both singular and plural)
+        if unit.startswith('minute') or unit == 'min' or unit == 'mins':
+            # 1 minute = 60 seconds
+            return int(value * 60)
+        elif unit.startswith('hour') or unit == 'hr' or unit == 'hrs':
+            # 1 hour = 3600 seconds (60 * 60)
+            return int(value * 3600)
+        elif unit.startswith('day'):
+            # 1 day = 86400 seconds (24 * 60 * 60)
+            return int(value * 86400)
+        elif unit.startswith('week'):
+            # 1 week = 604800 seconds (7 * 24 * 60 * 60)
+            return int(value * 604800)
+        elif unit.startswith('month'):
+            # 1 month ≈ 30 days = 2592000 seconds (30 * 24 * 60 * 60)
+            return int(value * 2592000)
+        elif unit.startswith('year'):
+            # 1 year ≈ 365 days = 31536000 seconds (365 * 24 * 60 * 60)
+            return int(value * 31536000)
+        else:
+            # Default to seconds if unit is not recognized
+            return int(value)
+    except (ValueError, IndexError):
+        return 0
+
+
 def authenticate_request(data):
     """Validate the API key from the request"""
     api_key = data.get("api_key")
@@ -145,6 +202,10 @@ def remove_client(router_api, params):
 
 def create_profile(router_api, params):
     """Create a new service profile (subscription package)"""
+    # Convert session timeout to seconds if present
+    if params.get("session_timeout"):
+        params["session_timeout"] = convert_to_seconds(params["session_timeout"])
+    
     if params["service"] == "pppoe":
         resource = router_api.get_resource('/ppp/profile')
         profile_data = {
@@ -153,8 +214,8 @@ def create_profile(router_api, params):
         if params.get("rate_limit"):
             profile_data["rate-limit"] = params["rate_limit"]
         if params.get("session_timeout"):
-            profile_data["session-timeout"] = params["session_timeout"]
-        print(**profile_data)
+            profile_data["session-timeout"] = str(params["session_timeout"])
+        
         resource.add(**profile_data)
 
     elif params["service"] == "hotspot":
@@ -165,13 +226,11 @@ def create_profile(router_api, params):
         if params.get("rate_limit"):
             profile_data["rate-limit"] = params["rate_limit"]
         if params.get("session_timeout"):
-            profile_data["session-timeout"] = params["session_timeout"]
+            profile_data["session-timeout"] = str(params["session_timeout"])
 
         resource.add(**profile_data)
 
     return {"message": f"Profile {params['name']} created successfully"}
-
-
 def setup_hotspot_server(router_api, params):
     """Set up a Hotspot server with required components"""
     # 1. Create IP pool if provided
