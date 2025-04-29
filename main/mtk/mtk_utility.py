@@ -183,6 +183,7 @@ def add_client(router_api, params):
     """Add a new client for the specified service"""
     if params["service"] == "pppoe":
         resource = router_api.get_resource('/ppp/secret')
+        print(params["username"],params["password"],params["profile_name"])
         resource.add(
             name=params["username"],
             password=params["password"],
@@ -196,7 +197,7 @@ def add_client(router_api, params):
             password=params["password"],
             profile=params["profile_name"]
         )
-
+   
     return {"message": f"Client {params['username']} added successfully"}
 
 

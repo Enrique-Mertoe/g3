@@ -57,6 +57,7 @@ def init_mtk(app: Flask):
             elif action == "get_hotspot_usage_report":
                 result = get_hotspot_usage_report(router_api, params)
             elif action == "add_client":
+                print("getting to add cllient")
                 result = add_client(router_api, params)
             elif action == "remove_client":
                 result = remove_client(router_api, params)
