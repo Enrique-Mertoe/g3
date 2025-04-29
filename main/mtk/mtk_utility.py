@@ -184,6 +184,7 @@ def add_client(router_api, params):
     print(params,router_api)
     if params["service"] == "ppoe":
         resource = router_api.get_resource('/ppp/secret')
+        print("PPOE CLients Category ")
         resource.add(
             name=params["username"],
             password=params["password"],
