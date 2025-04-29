@@ -144,6 +144,7 @@ def remove_profile(router_api, params):
         resource = router_api.get_resource('/ip/hotspot/user/profile')
 
     # Find and remove the profile
+    print(params["name"],params["service"],'deleitng profile from mikrotic')
     profiles = resource.get(name=params["name"])
     if profiles:
         resource.remove(id=profiles[0]["id"])
