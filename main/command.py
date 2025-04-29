@@ -1,6 +1,7 @@
 import paramiko
 import os
-
+import logging
+logging.getLogger("paramiko").setLevel(logging.WARNING)
 
 class CommandExecutor:
     def __init__(self, private_key_path, host='host.docker.internal', username=None):
