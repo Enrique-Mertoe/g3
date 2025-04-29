@@ -2,10 +2,8 @@ import logging
 import re
 from functools import wraps
 from typing import Dict, Any, Tuple, Optional, List
-
 import librouteros
 from flask import request, jsonify
-
 from settings import CONFIG
 
 logging.basicConfig(
