@@ -16,6 +16,7 @@ import SettingsPage from "./pages/SettingsPage.tsx";
 import SecurityPage from "./pages/SecurityPage.tsx";
 import CreateClient from "./ui/CreateClient.tsx";
 import ClientDetailPage from "./pages/ClientDetailPage.tsx";
+import LogsPage from "./pages/LogsPage.tsx";
 
 function RouterAwareApp() {
     const location = useLocation();
@@ -33,6 +34,7 @@ function RouterAwareApp() {
                 <Route path="/client/:name" element={<ClientDetailPage/>}/>
                 <Route path="/clients/create" element={<CreateClient/>}/>
                 <Route path="/isp/" element={<ISPPage/>}/>
+                <Route path="/server-logs/" element={<LogsPage/>}/>
                 <Route path="/packages/" element={<PackagesPage/>}/>
                 <Route path="/payments/" element={<PaymentAndBillingPage/>}/>
                 <Route path="/mikrotiks/" element={<RoutersPage/>}/>

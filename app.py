@@ -11,6 +11,7 @@ from main.admin.routes import init
 from main.api import init_api
 from main.command import CommandExecutor
 from main.dir_manager import VPNManager
+from main.log_manager import init_logger
 from main.middleware import init_middleware
 from main.mtk import init_mtk
 from radius_manager import RadiusClientManager
@@ -26,6 +27,7 @@ init(app)
 init_api(app)
 
 init_middleware(app)
+init_logger(app)
 
 
 @app.route("/settings")
