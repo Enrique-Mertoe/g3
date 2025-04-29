@@ -154,7 +154,7 @@ def create_profile(router_api, params):
             profile_data["rate-limit"] = params["rate_limit"]
         if params.get("session_timeout"):
             profile_data["session-timeout"] = params["session_timeout"]
-
+        print(**profile_data)
         resource.add(**profile_data)
 
     elif params["service"] == "hotspot":

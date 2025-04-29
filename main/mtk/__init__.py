@@ -12,6 +12,7 @@ def init_mtk(app: Flask):
     @app.route("/mtk/console", methods=["POST"])
     def mikrotik_command():
         data = request.json
+        print(data)
 
         # Authenticate the request
         if not authenticate_request(data):
