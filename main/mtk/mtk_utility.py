@@ -136,6 +136,21 @@ def connect_to_router(router_credentials) -> routeros_api.api.RouterOsApi:
     return connection.get_api()
 
 
+def remove_profile(router_api, params):
+    """Remove a service profile"""
+    if params["service"] == "pppoe":
+        resource = router_api.get_resource('/ppp/profile')
+    elif params["service"] == "hotspot":
+        resource = router_api.get_resource('/ip/hotspot/user/profile')
+
+    # Find and remove the profile
+    profiles = resource.get(name=params["name"])
+    if profiles:
+        resource.remove(id=profiles[0]["id"])
+        return {"message": f"Profile {params['name']} removed successfully"}
+    else:
+        return {"message": f"Profile {params['name']} not found"}
+
 # Action implementations
 def setup_pppoe_server(router_api, params, mtk: MTK):
     """Set up a PPPoE server with required components"""
