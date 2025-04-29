@@ -181,9 +181,9 @@ def setup_pppoe_server(router_api, params, mtk: MTK):
 
 def add_client(router_api, params):
     """Add a new client for the specified service"""
+    print(params,router_api)
     if params["service"] == "pppoe":
         resource = router_api.get_resource('/ppp/secret')
-        print(params["username"],params["password"],params["profile_name"])
         resource.add(
             name=params["username"],
             password=params["password"],
