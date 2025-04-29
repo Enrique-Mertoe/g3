@@ -197,7 +197,7 @@ def add_client(router_api, params):
             password=params["password"],
             profile=params["profile_name"]
         )
-
+   
     return {"message": f"Client {params['username']} added successfully"}
 
 
