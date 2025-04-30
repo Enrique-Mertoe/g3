@@ -138,7 +138,7 @@ def connect_to_router(router_credentials) -> routeros_api.api.RouterOsApi:
 
 def remove_profile(router_api, params):
     """Remove a service profile"""
-    if params["service"] == "pppoe":
+    if params["service"] == "ppoe":
         resource = router_api.get_resource('/ppp/profile')
     elif params["service"] == "hotspot":
         resource = router_api.get_resource('/ip/hotspot/user/profile')
@@ -153,8 +153,8 @@ def remove_profile(router_api, params):
         return {"message": f"Profile {params['name']} not found"}
 
 # Action implementations
-def setup_pppoe_server(router_api, params, mtk: MTK):
-    """Set up a PPPoE server with required components"""
+def setup_ppoe_server(router_api, params, mtk: MTK):
+    """Set up a PPoE server with required components"""
     pool_name = mtk.pool(params["ip_pool_range"])
 
     # 2. Set up PPP profile
@@ -165,30 +165,31 @@ def setup_pppoe_server(router_api, params, mtk: MTK):
         dns_server=",".join(params["dns_servers"])
     )
 
-    # 3. Enable PPPoE server on interface
-    pppoe_server_resource = router_api.get_resource('/interface/pppoe-server/server')
+    # 3. Enable PPoE server on interface
+    ppoe_server_resource = router_api.get_resource('/interface/ppoe-server/server')
     interface = mtk.bridge(params["ports"])
-    pppoe_server_resource.add(
-        service_name=f"pppoe-{interface}",
+    ppoe_server_resource.add(
+        service_name=f"ppoe-{interface}",
         interface=interface,
         default_profile=f"default-{MTK.server_id}",
         disabled="no",
         one_session_per_host="yes",
     )
 
-    return {"message": f"PPPoE server set up successfully on {params['interface']}"}
+    return {"message": f"PPoE server set up successfully on {params['interface']}"}
 
 
 def add_client(router_api, params):
     """Add a new client for the specified service"""
     print(params,router_api)
+    
     if params["service"] == "ppoe":
         resource = router_api.get_resource('/ppp/secret')
         print("PPOE CLients Category ")
         resource.add(
             name=params["username"],
             password=params["password"],
-            service="pppoe",
+            service="ppoe",
             profile=params["profile_name"]
         )
     elif params["service"] == "hotspot":
@@ -204,7 +205,7 @@ def add_client(router_api, params):
 
 def remove_client(router_api, params):
     """Remove an existing client"""
-    if params["service"] == "pppoe":
+    if params["service"] == "ppoe":
         resource = router_api.get_resource('/ppp/secret')
     elif params["service"] == "hotspot":
         resource = router_api.get_resource('/ip/hotspot/user')
@@ -224,7 +225,7 @@ def create_profile(router_api, params):
     if params.get("session_timeout"):
         params["session_timeout"] = convert_to_seconds(params["session_timeout"])
     
-    if params["service"] == "pppoe":
+    if params["service"] == "ppoe":
         resource = router_api.get_resource('/ppp/profile')
         profile_data = {
             "name": params["name"]
@@ -271,7 +272,7 @@ def setup_hotspot_server(router_api, params):
 
 def get_active_clients(router_api, params):
     """Get a list of currently connected clients"""
-    if params["service"] == "pppoe":
+    if params["service"] == "ppoe":
         resource = router_api.get_resource('/ppp/active')
     elif params["service"] == "hotspot":
         resource = router_api.get_resource('/ip/hotspot/active')
@@ -282,7 +283,7 @@ def get_active_clients(router_api, params):
 
 def get_client_usage(router_api, params):
     """Get bandwidth usage for a specific client"""
-    if params["service"] == "pppoe":
+    if params["service"] == "ppoe":
         resource = router_api.get_resource('/ppp/active')
     elif params["service"] == "hotspot":
         resource = router_api.get_resource('/ip/hotspot/active')

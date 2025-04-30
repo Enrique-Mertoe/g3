@@ -60,6 +60,7 @@ def init_mtk(app: Flask):
                 print("getting to add cllient")
                 result = add_client(router_api, params)
             elif action == "remove_client":
+                print('getting to remove client')
                 result = remove_client(router_api, params)
             elif action == "create_profile":
                 result = create_profile(router_api, params)
@@ -77,6 +78,7 @@ def init_mtk(app: Flask):
             return jsonify({"success": True, "result": result})
 
         except Exception as e:
+            raise
             logger.exception("Server error")
             return jsonify({"success": False, "error": str(e)}), 500
         finally:
