@@ -27,7 +27,7 @@ init(app)
 init_api(app)
 
 init_middleware(app)
-init_logger(app)
+# init_logger(app)
 
 
 @app.route("/settings")
