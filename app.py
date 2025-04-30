@@ -35,6 +35,11 @@ def settings_view():
     return render_template("index.html")
 
 
+@app.route("/server-logs")
+def server_logs():
+    return render_template("index.html")
+
+
 @app.route("/security")
 def security_view():
     return render_template("index.html")
