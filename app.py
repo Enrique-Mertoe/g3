@@ -27,11 +27,16 @@ init(app)
 init_api(app)
 
 init_middleware(app)
-init_logger(app)
+# init_logger(app)
 
 
 @app.route("/settings")
 def settings_view():
+    return render_template("index.html")
+
+
+@app.route("/server-logs")
+def server_logs():
     return render_template("index.html")
 
 
