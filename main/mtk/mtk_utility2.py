@@ -77,6 +77,7 @@ class RadiusManager:
             
             return {"message": f"User {username} added to RADIUS successfully", "error": False}
         except Exception as e:
+            raise
             return {"message": f"Failed to add user {username} to RADIUS: {str(e)}", "error": True}
     
     @staticmethod
@@ -135,6 +136,7 @@ class RadiusManager:
             
             return {"message": f"Profile {name} created in RADIUS successfully", "error": False}
         except Exception as e:
+            raise
             return {"message": f"Failed to create profile {name} in RADIUS: {str(e)}", "error": True}
     
     @staticmethod

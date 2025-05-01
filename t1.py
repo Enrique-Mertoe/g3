@@ -10,7 +10,7 @@ HEADERS = {
 
 # Replace with your actual API key and router details
 COMMON_DATA = {
-    "api_key": "YOUR_API_KEY",  # must match what authenticate_request expects
+    "api_key": "test-api-key",  # must match what authenticate_request expects
     "router": {
         "host": "10.8.0.35",  # or your OpenVPN-assigned router IP
         "username": "lom_tech_user",
