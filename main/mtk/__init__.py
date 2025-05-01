@@ -1,11 +1,7 @@
 from flask import Flask, request, jsonify
 
 from helpers import logger
-from main.mtk.mtk_utility2 import authenticate_request, setup_pppoe_server_with_radius, add_client, remove_client, create_profile, \
-    setup_radius_client,setup_hotspot_server_with_radius, get_active_clients, get_client_usage,get_dhcp_leases,get_interface_statistics,get_router_resource_usage, connect_to_router, customize_hotspot_login_page, \
-    add_hotspot_user, generate_hotspot_vouchers, list_hotspot_users, remove_hotspot_user, create_hotspot_profile, \
-    list_hotspot_profiles, add_walled_garden_site, remove_walled_garden_site, list_walled_garden_sites, \
-    get_active_hotspot_users, disconnect_hotspot_user, get_hotspot_usage_report, MTK,remove_profile
+from main.mtk.mtk_utility2 import authenticate_request, setup_pppoe_server_with_radius, add_client, remove_client, create_profile,setup_radius_client,setup_hotspot_server_with_radius, get_active_clients, get_client_usage,get_dhcp_leases,get_interface_statistics,get_router_resource_usage, connect_to_router, customize_hotspot_login_page,generate_hotspot_vouchers,add_walled_garden_site, remove_walled_garden_site, list_walled_garden_sites, disconnect_hotspot_user, get_hotspot_usage_report, MTK,remove_profile
 
 def init_mtk(app: Flask):
     @app.route("/mtk/console", methods=["POST"])
