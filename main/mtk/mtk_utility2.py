@@ -359,7 +359,8 @@ def authenticate_request(data):
 def connect_to_router(router_credentials) -> routeros_api.api.RouterOsApi:
     """Create a connection to the MikroTik router with better error handling"""
     try:
-        host = VPNManager.getIpAddress(router_credentials["host"])
+        # host = VPNManager.getIpAddress(router_credentials["host"])
+        host=router_credentials["host"]
         logger.info(f"Attempting to connect to router at {host}")
         
         # Add timeout for connection attempts
