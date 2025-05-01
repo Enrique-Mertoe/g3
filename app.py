@@ -344,8 +344,8 @@ def delete_radius_client(client_name):
         return jsonify({"status": "error", "message": message}), 404
 
 
+check_and_create_tables()
 
 init_mtk(app)
 if __name__ == '__main__':
-    check_and_create_tables()
     app.run()
