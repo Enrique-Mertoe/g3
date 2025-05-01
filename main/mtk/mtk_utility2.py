@@ -419,11 +419,19 @@ def setup_radius_client(router_api, params):
 
 
 def setup_pppoe_server_with_radius(router_api, params, mtk):
-    """Set up a PPPoE server that uses RADIUS for authentication"""
+    """Set up a PPPoE server that uses RADIUS for authentication
+    
+    Since RADIUS handles authentication, we don't need to create profiles and clients on the router.
+    We only need to:
+    1. Create an IP pool for address assignment
+    2. Create a minimal PPP profile that points to RADIUS
+    3. Set up the PPPoE server itself
+    """
     try:
+        # Create IP pool for address assignment
         pool_name = mtk.pool(params["ip_pool_range"])
         
-        # Set up PPP profile for RADIUS authentication
+        # Create a minimal PPP profile that points to RADIUS
         profile_resource = router_api.get_resource('/ppp/profile')
         profile_name = f"radius-pppoe-{mtk.server_id}"
         
@@ -432,35 +440,68 @@ def setup_pppoe_server_with_radius(router_api, params, mtk):
         existing = [p for p in profiles if p['name'] == profile_name]
         
         if not existing:
-            # Correct parameters for RADIUS authentication
-            profile_resource.add(
-                name=profile_name,
-                local_address=pool_name,
-                remote_address=pool_name,
-                # The correct parameter is 'use-radius' (not 'use_radius')
-                # and MikroTik expects 'yes' without quotes
-                **{"use-radius": "yes"},
-                dns_server=",".join(params["dns_servers"]),
-                comment="Profile for RADIUS authentication"
-            )
+            # Create a minimal profile that delegates authentication to RADIUS
+            # Note: Different RouterOS versions might use different parameter names
+            try:
+                # First try with 'use-radius' (represented as use_radius in Python)
+                profile_resource.add(
+                    name=profile_name,
+                    local_address=pool_name,
+                    remote_address=pool_name,
+                    use_radius="yes",  # This maps to 'use-radius' on the router
+                    dns_server=",".join(params["dns_servers"]),
+                    comment="Profile for RADIUS authentication"
+                )
+            except Exception as profile_error:
+                # If that fails, try with just 'radius'
+                if "unknown parameter use_radius" in str(profile_error) or "unknown parameter use-radius" in str(profile_error):
+                    profile_resource.add(
+                        name=profile_name,
+                        local_address=pool_name,
+                        remote_address=pool_name,
+                        radius="yes",  # Alternative parameter name
+                        dns_server=",".join(params["dns_servers"]),
+                        comment="Profile for RADIUS authentication"
+                    )
+                else:
+                    # If it's some other error, raise it
+                    raise profile_error
         
-        # Enable PPPoE server on interface
+        # Set up the PPPoE server itself
         bridge_name = mtk.bridge(params["ports"])
         pppoe_server_resource = router_api.get_resource('/interface/pppoe-server/server')
         
         # Check if server already exists
         servers = pppoe_server_resource.get()
-        existing_server = [s for s in servers if s['service-name'] == f"pppoe-{bridge_name}"]
+        existing_server = [s for s in servers if s.get('service-name', '') == f"pppoe-{bridge_name}" or 
+                          s.get('service_name', '') == f"pppoe-{bridge_name}"]
         
         if not existing_server:
-            pppoe_server_resource.add(
-                **{"service-name": f"pppoe-{bridge_name}"},  # Using dict unpacking for hyphenated params
-                interface=bridge_name,
-                **{"default-profile": profile_name},  # Using dict unpacking for hyphenated params
-                disabled="no",
-                **{"one-session-per-host": "yes"},  # Using dict unpacking for hyphenated params
-                **{"use-radius": "yes"}  # Using dict unpacking for hyphenated params
-            )
+            # Set up the PPPoE server, using the RADIUS-based profile
+            try:
+                pppoe_server_resource.add(
+                    service_name=f"pppoe-{bridge_name}",
+                    interface=bridge_name,
+                    default_profile=profile_name,
+                    disabled="no",
+                    one_session_per_host="yes",
+                    use_radius="yes"
+                )
+            except Exception as server_error:
+                # Try alternative parameter names if the first attempt fails
+                if "unknown parameter" in str(server_error):
+                    # Try with alternative parameter names (RouterOS 7.x style)
+                    pppoe_server_resource.add(
+                        **{"service-name": f"pppoe-{bridge_name}"},  # Use dict notation for hyphenated keys
+                        interface=bridge_name,
+                        **{"default-profile": profile_name},
+                        disabled="no",
+                        **{"one-session-per-host": "yes"},
+                        radius="yes"  # Alternative to use_radius
+                    )
+                else:
+                    # If it's some other error, raise it
+                    raise server_error
         
         return {"message": f"PPPoE server with RADIUS authentication set up successfully on {bridge_name}", "error": False}
     except Exception as e:

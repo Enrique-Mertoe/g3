@@ -41,4 +41,4 @@ def test_router_connectivity(host, port=8728):
         return False
 
 # Example usage
-test_router_connectivity("10.8.0.35")
+test_router_connectivity("10.8.0.36")
