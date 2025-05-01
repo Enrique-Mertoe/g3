@@ -15,7 +15,6 @@ from main.log_manager import init_logger
 from main.middleware import init_middleware
 from main.mtk import init_mtk
 from radius_manager import RadiusClientManager
-
 app = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__), 'frontend', "dist"),
             static_folder=os.path.join(os.path.dirname(__file__), 'frontend', "dist", "static")
             )
@@ -88,9 +87,11 @@ def mtk_create_new_provision(provision_identity):
         }), 202
 
     except ValueError as e:
+        raise
         # REQUEST_COUNT.labels(method='POST', endpoint='/create_provision', status='400').inc()
         return jsonify({"error": str(e)}), 400
     except Exception as e:
+        raise
         # REQUEST_COUNT.labels(method='POST', endpoint='/create_provision', status='500').inc()
         return jsonify({"error": "Internal server error", "message": str(e)}), 500
 
@@ -340,6 +341,73 @@ def delete_radius_client(client_name):
         return jsonify({"status": "success", "message": message})
     else:
         return jsonify({"status": "error", "message": message}), 404
+
+
+
+@app.route('/')
+def index():
+    """Dashboard homepage"""
+    return render_template('index.html')
+
+# RADIUS Client API endpoints
+@app.route('/api/clients', methods=['GET'])
+@require_api_key
+def get_clients():
+    """Get all RADIUS clients"""
+    client_manager = RadiusClientManager()
+    clients = client_manager.get_clients()
+    return jsonify(clients)
+
+@app.route('/api/clients', methods=['POST'])
+@require_api_key
+def add_client():
+    """Add a RADIUS client"""
+    data = request.json
+    client_manager = RadiusClientManager()
+    
+    # Check required fields
+    if not all(k in data for k in ['name', 'ipaddr', 'secret']):
+        return jsonify({'error': 'Missing required fields'}), 400
+    
+    nastype = data.get('nastype', 'mikrotik')
+    success, message = client_manager.add_client(data['name'], data['ipaddr'], data['secret'], nastype)
+    
+    if success:
+        return jsonify({'message': message}), 201
+    else:
+        return jsonify({'error': message}), 400
+
+@app.route('/api/clients/<name>', methods=['PUT'])
+@require_api_key
+def update_client(name):
+    """Update a RADIUS client"""
+    data = request.json
+    client_manager = RadiusClientManager()
+    
+    ipaddr = data.get('ipaddr')
+    secret = data.get('secret')
+    nastype = data.get('nastype')
+    
+    success, message = client_manager.update_client(name, ipaddr, secret, nastype)
+    
+    if success:
+        return jsonify({'message': message})
+    else:
+        return jsonify({'error': message}), 404
+
+@app.route('/api/clients/<name>', methods=['DELETE'])
+@require_api_key
+def delete_client(name):
+    """Delete a RADIUS client"""
+    client_manager = RadiusClientManager()
+    success, message = client_manager.delete_client(name)
+    
+    if success:
+        return jsonify({'message': message})
+    else:
+        return jsonify({'error': message}), 404
+
+# RADIUS User API endpoints
 
 
 init_mtk(app)

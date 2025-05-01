@@ -56,12 +56,12 @@ class RadiusClientManager:
         
         # Create new client block
         new_client = f"""
-client {name} {{
-    ipaddr = {ipaddr}
-    secret = {secret}
-    nastype = {nastype}
-}}
-"""
+            client {name} {{
+                ipaddr = {ipaddr}
+                secret = {secret}
+                nastype = {nastype}
+            }}
+            """
         # Append to file
         updated_content = content + "\n" + new_client
         self.write_clients_conf(updated_content)

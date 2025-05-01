@@ -225,31 +225,35 @@ def create_profile(router_api, params):
     if params.get("session_timeout"):
         params["session_timeout"] = convert_to_seconds(params["session_timeout"])
     
-    if params["service"] == "pppoe":
-        resource = router_api.get_resource('/ppp/profile')
-        profile_data = {
-            "name": params["name"]
-        }
-        if params.get("rate_limit"):
-            profile_data["rate-limit"] = params["rate_limit"]
-        if params.get("session_timeout"):
-            profile_data["session-timeout"] = str(params["session_timeout"])
-        
-        resource.add(**profile_data)
+        if params["service"] == "pppoe":
+            resource = router_api.get_resource('/ppp/profile')
+            profile_data = {
+                "name": params["name"]
+            }
+            if params.get("rate_limit"):
+                profile_data["rate-limit"] = params["rate_limit"]
+            if params.get("session_timeout"):
+                profile_data["session-timeout"] = str(params["session_timeout"])
+            
+            resource.add(**profile_data)
 
-    elif params["service"] == "hotspot":
-        resource = router_api.get_resource('/ip/hotspot/user/profile')
-        profile_data = {
-            "name": params["name"]
-        }
-        if params.get("rate_limit"):
-            profile_data["rate-limit"] = params["rate_limit"]
-        if params.get("session_timeout"):
-            profile_data["session-timeout"] = str(params["session_timeout"])
+        elif params["service"] == "hotspot":
+            resource = router_api.get_resource('/ip/hotspot/user/profile')
+            profile_data = {
+                "name": params["name"]
+            }
+            if params.get("rate_limit"):
+                profile_data["rate-limit"] = params["rate_limit"]
+            if params.get("session_timeout"):
+                profile_data["session-timeout"] = str(params["session_timeout"])
 
-        resource.add(**profile_data)
+            resource.add(**profile_data)
 
-    return {"message": f"Profile {params['name']} created successfully"}
+        return {"message": f"Profile {params['name']} created successfully", "error": False}
+    else:
+        return {"message": "Session timeout is required for profile creation", "error": True}
+    
+
 def setup_hotspot_server(router_api, params):
     """Set up a Hotspot server with required components"""
     # 1. Create IP pool if provided
