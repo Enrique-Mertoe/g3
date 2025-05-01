@@ -2,6 +2,7 @@ import os
 import time
 import mysql.connector
 from typing import Dict, List, Optional, Any
+from helpers import logger
 
 import routeros_api
 
@@ -355,18 +356,47 @@ def authenticate_request(data):
         return False
     return True
 
-
 def connect_to_router(router_credentials) -> routeros_api.api.RouterOsApi:
-    """Create a connection to the MikroTik router"""
-    host = VPNManager.getIpAddress(router_credentials["host"])
-    connection = routeros_api.RouterOsApiPool(
-        host=host,
-        username=router_credentials["username"],
-        password=router_credentials["password"],
-        plaintext_login=True
-    )
-    MTK.conn = connection
-    return connection.get_api()
+    """Create a connection to the MikroTik router with better error handling"""
+    try:
+        host = VPNManager.getIpAddress(router_credentials["host"])
+        logger.info(f"Attempting to connect to router at {host}")
+        
+        # Add timeout for connection attempts
+        connection = routeros_api.RouterOsApiPool(
+            host=host,
+            username=router_credentials["username"],
+            password=router_credentials["password"],
+            plaintext_login=True,
+            port=router_credentials.get("port", 8728),  # Default port is 8728 for API
+            use_ssl=router_credentials.get("use_ssl", False),
+            ssl_verify=router_credentials.get("ssl_verify", True),
+            timeout=5  # Add a timeout of 5 seconds
+        )
+        MTK.conn = connection
+        api = connection.get_api()
+        logger.info(f"Successfully connected to router at {host}")
+        return api
+        
+    except routeros_api.exceptions.RouterOsApiConnectionError as e:
+        logger.error(f"Failed to connect to router at {host}: {str(e)}")
+        raise Exception(f"Could not connect to router at {host}. Please check if the router is online and reachable.")
+    except Exception as e:
+        logger.error(f"Unexpected error connecting to router: {str(e)}")
+        raise
+
+
+# def connect_to_router(router_credentials) -> routeros_api.api.RouterOsApi:
+#     """Create a connection to the MikroTik router"""
+#     host = VPNManager.getIpAddress(router_credentials["host"])
+#     connection = routeros_api.RouterOsApiPool(
+#         host=host,
+#         username=router_credentials["username"],
+#         password=router_credentials["password"],
+#         plaintext_login=True
+#     )
+#     MTK.conn = connection
+#     return connection.get_api()
 
 
 def setup_radius_client(router_api, params):

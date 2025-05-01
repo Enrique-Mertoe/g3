@@ -14,6 +14,18 @@ def init_mtk(app: Flask):
             return jsonify({"success": False, "error": "Invalid API key"}), 401
 
         try:
+            # Add server_id if missing
+            if "server_id" not in data:
+                    # Option 1: Use router IP as identifier
+                    router_ip = data["router"]["host"].replace(".", "-")
+                    data["server_id"] = f"router-{router_ip}"
+                    
+                    # Option 2: Use action type + router IP
+                    data["server_id"] = f"{data['action']}-{router_ip}"
+                    
+                    # Option 3: If there's a service name in params
+                    if "service_name" in data["params"]:
+                        data["server_id"] = data["params"]["service_name"]
             mtk = MTK(data)
             # Get the router connection
             router_api = connect_to_router(data["router"])
