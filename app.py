@@ -14,6 +14,7 @@ from main.dir_manager import VPNManager
 from main.log_manager import init_logger
 from main.middleware import init_middleware
 from main.mtk import init_mtk
+from checkRadiusDb import check_and_create_tables
 from radius_manager import RadiusClientManager
 app = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__), 'frontend', "dist"),
             static_folder=os.path.join(os.path.dirname(__file__), 'frontend', "dist", "static")
@@ -346,4 +347,5 @@ def delete_radius_client(client_name):
 
 init_mtk(app)
 if __name__ == '__main__':
+    check_and_create_tables()
     app.run()
