@@ -371,7 +371,7 @@ def connect_to_router(router_credentials) -> routeros_api.api.RouterOsApi:
             port=router_credentials.get("port", 8728),  # Default port is 8728 for API
             use_ssl=router_credentials.get("use_ssl", False),
             ssl_verify=router_credentials.get("ssl_verify", True),
-            timeout=5  # Add a timeout of 5 seconds
+            # timeout=5  # Add a timeout of 5 seconds
         )
         MTK.conn = connection
         api = connection.get_api()
