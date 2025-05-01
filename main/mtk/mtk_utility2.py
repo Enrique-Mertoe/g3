@@ -550,6 +550,7 @@ def setup_hotspot_server_with_radius(router_api, params, mtk):
         bridge_name = mtk.bridge(params["ports"])
         
         # Create IP pool if provided
+        pool_name = None
         if params.get("ip_pool"):
             pool_name = f"hotspot-{bridge_name}"
             ip_pool_resource = router_api.get_resource('/ip/pool')
@@ -564,10 +565,8 @@ def setup_hotspot_server_with_radius(router_api, params, mtk):
                     ranges=params["ip_pool"]
                 )
         
-        # First ensure the bridge has the required IP address
+        # Ensure the bridge has the required IP address
         ip_address_resource = router_api.get_resource('/ip/address')
-        
-        # Check if the IP is already assigned
         addresses = ip_address_resource.get()
         existing_address = [a for a in addresses if a.get('interface') == bridge_name and a.get('address') == params["network"]]
         
@@ -577,44 +576,39 @@ def setup_hotspot_server_with_radius(router_api, params, mtk):
                 interface=bridge_name
             )
         
-        # Configure hotspot server using the hotspot tool
-        # MikroTik uses a special command for hotspot setup
-        # We need to call the proper method using the RouterOS API
-        
-        # The correct path for hotspot setup is '/ip/hotspot/setup'
-        setup_command = router_api.path('/ip/hotspot/setup')
-        
-        # Prepare parameters for the command
-        setup_params = {
-            "interface": bridge_name,
-            "address-pool": pool_name,
-            "dns-name": params["dns_name"],
-            "profile": f"hotspot-{bridge_name}-profile"
-        }
-        
-        # Execute the setup command
-        router_api.execute(setup_command, **setup_params)
-        
-        # Now configure RADIUS authentication for the hotspot
+        # Create a RADIUS-specific hotspot profile directly (not using setup wizard)
+        profile_name = f"radius-hotspot-{bridge_name}"
         profile_resource = router_api.get_resource('/ip/hotspot/profile')
         profiles = profile_resource.get()
+        existing_profile = [p for p in profiles if p['name'] == profile_name]
         
-        # Find the profile created by the setup
-        target_profile_name = f"hotspot-{bridge_name}-profile"
-        profile_to_update = next((p for p in profiles if p['name'] == target_profile_name), None)
-        
-        if profile_to_update:
-            # Update the profile to use RADIUS
-            profile_resource.set(
-                id=profile_to_update['id'],
-                **{"use-radius": "yes"}  # Using dict unpacking for hyphenated param
+        if not existing_profile:
+            # Create a profile that explicitly uses RADIUS
+            profile_resource.add(
+                name=profile_name,
+                hotspot_address=params["network"].split('/')[0],
+                dns_name=params["dns_name"],
+                use_radius="yes",
+                login_by="http-pap", # This ensures PAP auth for RADIUS compatibility 
+                html_directory="hotspot"
             )
         
+        # Create the actual hotspot server
+        server_resource = router_api.get_resource('/ip/hotspot')
+        servers = server_resource.get()
+        existing_server = [s for s in servers if s.get('interface') == bridge_name]
+        
+        if not existing_server:
+            server_resource.add(
+                interface=bridge_name,
+                address_pool=pool_name if pool_name else "none",
+                profile=profile_name,
+                disabled="no"
+            )
+            
         return {"message": f"Hotspot server with RADIUS authentication set up successfully on {bridge_name}", "error": False}
     except Exception as e:
         return {"message": f"Failed to set up Hotspot server: {str(e)}", "error": True}
-
-
 def add_client(params):
     """Add a new client to the RADIUS database"""
     try:
