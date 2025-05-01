@@ -418,7 +418,7 @@ def setup_radius_client(router_api, params):
         return {"message": f"Failed to configure RADIUS server: {str(e)}", "error": True}
 
 
-def setup_pppoe_server_with_radius(router_api, params, mtk: MTK):
+def setup_pppoe_server_with_radius(router_api, params, mtk):
     """Set up a PPPoE server that uses RADIUS for authentication"""
     try:
         pool_name = mtk.pool(params["ip_pool_range"])
@@ -432,11 +432,14 @@ def setup_pppoe_server_with_radius(router_api, params, mtk: MTK):
         existing = [p for p in profiles if p['name'] == profile_name]
         
         if not existing:
+            # Correct parameters for RADIUS authentication
             profile_resource.add(
                 name=profile_name,
                 local_address=pool_name,
                 remote_address=pool_name,
-                use_radius="yes",
+                # The correct parameter is 'use-radius' (not 'use_radius')
+                # and MikroTik expects 'yes' without quotes
+                **{"use-radius": "yes"},
                 dns_server=",".join(params["dns_servers"]),
                 comment="Profile for RADIUS authentication"
             )
@@ -451,12 +454,12 @@ def setup_pppoe_server_with_radius(router_api, params, mtk: MTK):
         
         if not existing_server:
             pppoe_server_resource.add(
-                service_name=f"pppoe-{bridge_name}",
+                **{"service-name": f"pppoe-{bridge_name}"},  # Using dict unpacking for hyphenated params
                 interface=bridge_name,
-                default_profile=profile_name,
+                **{"default-profile": profile_name},  # Using dict unpacking for hyphenated params
                 disabled="no",
-                one_session_per_host="yes",
-                use_radius="yes"
+                **{"one-session-per-host": "yes"},  # Using dict unpacking for hyphenated params
+                **{"use-radius": "yes"}  # Using dict unpacking for hyphenated params
             )
         
         return {"message": f"PPPoE server with RADIUS authentication set up successfully on {bridge_name}", "error": False}
@@ -464,7 +467,7 @@ def setup_pppoe_server_with_radius(router_api, params, mtk: MTK):
         return {"message": f"Failed to set up PPPoE server: {str(e)}", "error": True}
 
 
-def setup_hotspot_server_with_radius(router_api, params, mtk: MTK):
+def setup_hotspot_server_with_radius(router_api, params, mtk):
     """Set up a Hotspot server that uses RADIUS for authentication"""
     try:
         # Create bridge interface if needed
@@ -485,34 +488,50 @@ def setup_hotspot_server_with_radius(router_api, params, mtk: MTK):
                     ranges=params["ip_pool"]
                 )
         
-        # Configure hotspot server
-        server_resource = router_api.get_resource('/ip/hotspot')
+        # First ensure the bridge has the required IP address
+        ip_address_resource = router_api.get_resource('/ip/address')
         
-        # Check if hotspot server already exists
-        servers = server_resource.get()
-        existing_server = [s for s in servers if s['interface'] == bridge_name]
+        # Check if the IP is already assigned
+        addresses = ip_address_resource.get()
+        existing_address = [a for a in addresses if a.get('interface') == bridge_name and a.get('address') == params["network"]]
         
-        if not existing_server:
-            # Run the hotspot setup
-            setup_resource = router_api.get_resource('/ip/hotspot/setup')
-            setup_resource.add(
-                interface=bridge_name,
+        if not existing_address:
+            ip_address_resource.add(
                 address=params["network"],
-                dns_name=params["dns_name"]
+                interface=bridge_name
             )
         
-        # Configure RADIUS authentication for hotspot
-        server_profile_resource = router_api.get_resource('/ip/hotspot/profile')
-        profiles = server_profile_resource.get()
+        # Configure hotspot server using the hotspot tool
+        # MikroTik uses a special command for hotspot setup
+        # We need to call the proper method using the RouterOS API
         
-        # Find the default profile for our hotspot
-        default_profile = next((p for p in profiles if p['hotspot'] == bridge_name), None)
+        # The correct path for hotspot setup is '/ip/hotspot/setup'
+        setup_command = router_api.path('/ip/hotspot/setup')
         
-        if default_profile:
+        # Prepare parameters for the command
+        setup_params = {
+            "interface": bridge_name,
+            "address-pool": pool_name,
+            "dns-name": params["dns_name"],
+            "profile": f"hotspot-{bridge_name}-profile"
+        }
+        
+        # Execute the setup command
+        router_api.execute(setup_command, **setup_params)
+        
+        # Now configure RADIUS authentication for the hotspot
+        profile_resource = router_api.get_resource('/ip/hotspot/profile')
+        profiles = profile_resource.get()
+        
+        # Find the profile created by the setup
+        target_profile_name = f"hotspot-{bridge_name}-profile"
+        profile_to_update = next((p for p in profiles if p['name'] == target_profile_name), None)
+        
+        if profile_to_update:
             # Update the profile to use RADIUS
-            server_profile_resource.set(
-                id=default_profile['id'],
-                use_radius="yes"
+            profile_resource.set(
+                id=profile_to_update['id'],
+                **{"use-radius": "yes"}  # Using dict unpacking for hyphenated param
             )
         
         return {"message": f"Hotspot server with RADIUS authentication set up successfully on {bridge_name}", "error": False}
@@ -881,3 +900,318 @@ def format_bytes(bytes_count):
         return f"{bytes_count/(1024*1024):.2f}MB"
     else:
         return f"{bytes_count/(1024*1024*1024):.2f}GB"
+    
+
+def get_all_clients(params=None):
+    """
+    Get all clients from the RADIUS database with their attributes and profile information
+    
+    Args:
+        params (dict, optional): Parameters for filtering clients
+            - username: Filter by username
+            - profile: Filter by profile name
+            - limit: Limit the number of results
+            - offset: Offset for pagination
+    
+    Returns:
+        dict: Dictionary containing list of clients with their attributes and profiles
+    """
+    try:
+        conn = RadiusManager.get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Start building the base query to get all users
+        base_query = """
+            SELECT DISTINCT rc.username
+            FROM radcheck rc
+        """
+        
+        # Add JOIN for profile filtering if requested
+        if params and params.get("profile"):
+            base_query += """
+                JOIN radusergroup rug ON rc.username = rug.username
+                WHERE rug.groupname = %s
+            """
+            query_params = [params.get("profile")]
+        # Filter by username if requested
+        elif params and params.get("username"):
+            base_query += " WHERE rc.username LIKE %s"
+            query_params = [f"%{params.get('username')}%"]
+        else:
+            base_query += " WHERE 1=1"
+            query_params = []
+            
+        # Add limit and offset if provided
+        if params and params.get("limit"):
+            base_query += " LIMIT %s"
+            query_params.append(int(params.get("limit")))
+            
+            if params.get("offset"):
+                base_query += " OFFSET %s"
+                query_params.append(int(params.get("offset")))
+                
+        # Execute the query to get all usernames
+        cursor.execute(base_query, query_params)
+        user_results = cursor.fetchall()
+        
+        # Prepare the list to store detailed user information
+        users_with_details = []
+        
+        # For each user, fetch their full details
+        for user_row in user_results:
+            username = user_row["username"]
+            user_info = {"username": username}
+            
+            # Get authentication details (password, etc)
+            cursor.execute(
+                "SELECT attribute, value FROM radcheck WHERE username = %s",
+                (username,)
+            )
+            auth_details = cursor.fetchall()
+            
+            # Add each attribute to user info
+            for detail in auth_details:
+                if detail["attribute"] == "Cleartext-Password":
+                    user_info["password"] = detail["value"]
+                else:
+                    # Add other attributes with their names
+                    user_info[detail["attribute"]] = detail["value"]
+            
+            # Get reply attributes (rate limits, session timeout, etc.)
+            cursor.execute(
+                "SELECT attribute, value FROM radreply WHERE username = %s",
+                (username,)
+            )
+            reply_attributes = cursor.fetchall()
+            
+            # Format and add reply attributes
+            for attr in reply_attributes:
+                # Format bandwidth attributes
+                if attr["attribute"] == "WISPr-Bandwidth-Max-Up":
+                    user_info["upload_limit"] = _format_bandwidth(attr["value"])
+                elif attr["attribute"] == "WISPr-Bandwidth-Max-Down":
+                    user_info["download_limit"] = _format_bandwidth(attr["value"])
+                elif attr["attribute"] == "Session-Timeout":
+                    user_info["session_timeout"] = _format_seconds(int(attr["value"]))
+                else:
+                    # Add other attributes with their names
+                    user_info[attr["attribute"]] = attr["value"]
+            
+            # Get assigned profiles/groups
+            cursor.execute(
+                "SELECT groupname FROM radusergroup WHERE username = %s ORDER BY priority",
+                (username,)
+            )
+            groups = cursor.fetchall()
+            user_info["profiles"] = [g["groupname"] for g in groups]
+            
+            # Get current session information if available
+            cursor.execute("""
+                SELECT acctstarttime, acctsessiontime, framedipaddress, 
+                       acctinputoctets, acctoutputoctets, nasipaddress
+                FROM radacct 
+                WHERE username = %s AND acctstoptime IS NULL
+                ORDER BY acctstarttime DESC LIMIT 1
+            """, (username,))
+            
+            session = cursor.fetchone()
+            if session:
+                # Format and add session info
+                user_info["active_session"] = {
+                    "start_time": session["acctstarttime"].isoformat() if session["acctstarttime"] else None,
+                    "duration": _format_seconds(session["acctsessiontime"]) if session["acctsessiontime"] else "0",
+                    "ip_address": session["framedipaddress"],
+                    "data_in": _format_bytes(session["acctinputoctets"]) if session["acctinputoctets"] else "0",
+                    "data_out": _format_bytes(session["acctoutputoctets"]) if session["acctoutputoctets"] else "0",
+                    "router_ip": session["nasipaddress"]
+                }
+            else:
+                user_info["active_session"] = None
+            
+            # Add user with all details to the result list
+            users_with_details.append(user_info)
+        
+        cursor.close()
+        conn.close()
+        
+        return {
+            "clients": users_with_details,
+            "count": len(users_with_details),
+            "error": False
+        }
+        
+    except Exception as e:
+        return {"message": f"Failed to get clients: {str(e)}", "error": True}
+
+
+def get_all_packages(params=None):
+    """
+    Get all packages (profiles) from the RADIUS database with their attributes
+    
+    Args:
+        params (dict, optional): Parameters for filtering packages
+            - name: Filter by package name
+            - limit: Limit the number of results
+            - offset: Offset for pagination
+    
+    Returns:
+        dict: Dictionary containing list of packages with their attributes
+    """
+    try:
+        conn = RadiusManager.get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Start building the query
+        query = """
+            SELECT DISTINCT groupname 
+            FROM radgroupreply
+        """
+        
+        # Add WHERE clause for filtering by name if requested
+        if params and params.get("name"):
+            query += " WHERE groupname LIKE %s"
+            query_params = [f"%{params.get('name')}%"]
+        else:
+            query_params = []
+            
+        # Add limit and offset if provided
+        if params and params.get("limit"):
+            query += " LIMIT %s"
+            query_params.append(int(params.get("limit")))
+            
+            if params.get("offset"):
+                query += " OFFSET %s"
+                query_params.append(int(params.get("offset")))
+                
+        # Execute the query to get all profile names
+        cursor.execute(query, query_params)
+        profile_results = cursor.fetchall()
+        
+        # Prepare the list to store detailed profile information
+        profiles_with_details = []
+        
+        # For each profile, fetch the details
+        for profile_row in profile_results:
+            profile_name = profile_row["groupname"]
+            profile_info = {"name": profile_name}
+            
+            # Get all attributes for this profile
+            cursor.execute(
+                "SELECT attribute, op, value FROM radgroupreply WHERE groupname = %s",
+                (profile_name,)
+            )
+            attributes = cursor.fetchall()
+            
+            # Format and add attributes
+            for attr in attributes:
+                if attr["attribute"] == "WISPr-Bandwidth-Max-Up":
+                    profile_info["upload_limit"] = _format_bandwidth(attr["value"])
+                elif attr["attribute"] == "WISPr-Bandwidth-Max-Down":
+                    profile_info["download_limit"] = _format_bandwidth(attr["value"])
+                elif attr["attribute"] == "Session-Timeout":
+                    profile_info["session_timeout"] = _format_seconds(int(attr["value"]))
+                else:
+                    # Add other attributes with their names
+                    profile_info[attr["attribute"]] = attr["value"]
+            
+            # Count users assigned to this profile
+            cursor.execute(
+                "SELECT COUNT(*) as user_count FROM radusergroup WHERE groupname = %s",
+                (profile_name,)
+            )
+            count_result = cursor.fetchone()
+            profile_info["assigned_users"] = count_result["user_count"] if count_result else 0
+            
+            # Add profile with all details to the result list
+            profiles_with_details.append(profile_info)
+        
+        cursor.close()
+        conn.close()
+        
+        return {
+            "packages": profiles_with_details,
+            "count": len(profiles_with_details),
+            "error": False
+        }
+        
+    except Exception as e:
+        return {"message": f"Failed to get packages: {str(e)}", "error": True}
+
+
+# Helper functions for formatting values
+def _format_bandwidth(value_in_bps):
+    """Format bandwidth values from bps to human-readable format"""
+    try:
+        bps = int(value_in_bps)
+        if bps < 1000:
+            return f"{bps}bps"
+        elif bps < 1000000:
+            return f"{bps/1000:.0f}kbps"
+        else:
+            return f"{bps/1000000:.1f}Mbps"
+    except (ValueError, TypeError):
+        return value_in_bps  # Return original if can't convert
+
+
+def _format_seconds(seconds):
+    """Format seconds to human-readable time duration"""
+    try:
+        seconds = int(seconds)
+        if seconds < 60:
+            return f"{seconds} seconds"
+        elif seconds < 3600:
+            return f"{seconds//60} minutes"
+        elif seconds < 86400:
+            hours = seconds // 3600
+            minutes = (seconds % 3600) // 60
+            return f"{hours} hours {minutes} minutes"
+        elif seconds < 2592000:  # 30 days
+            days = seconds // 86400
+            hours = (seconds % 86400) // 3600
+            return f"{days} days {hours} hours"
+        elif seconds < 31536000:  # 365 days
+            months = seconds // 2592000
+            days = (seconds % 2592000) // 86400
+            return f"{months} months {days} days"
+        else:
+            years = seconds // 31536000
+            months = (seconds % 31536000) // 2592000
+            return f"{years} years {months} months"
+    except (ValueError, TypeError):
+        return str(seconds) + " seconds"  # Return original if can't convert
+
+
+def _format_bytes(bytes_value):
+    """Format bytes to human-readable size"""
+    try:
+        bytes_count = int(bytes_value)
+        if bytes_count < 1024:
+            return f"{bytes_count}B"
+        elif bytes_count < 1024 * 1024:
+            return f"{bytes_count/1024:.2f}KB"
+        elif bytes_count < 1024 * 1024 * 1024:
+            return f"{bytes_count/(1024*1024):.2f}MB"
+        else:
+            return f"{bytes_count/(1024*1024*1024):.2f}GB"
+    except (ValueError, TypeError):
+        return str(bytes_value) + " bytes"  # Return original if can't convert
+
+
+# Example API integration
+def handle_client_requests(data):
+    """Handle client-related API requests"""
+    action = data.get("action")
+    params = data.get("params", {})
+    
+    if action == "get_all_clients":
+        return get_all_clients(params)
+    elif action == "get_all_packages":
+        return get_all_packages(params)
+    elif action == "add_client":
+        return add_client(params)
+    elif action == "remove_client":
+        return remove_client(params)
+    elif action == "get_client_usage":
+        return get_client_usage(params)
+    else:
+        return {"message": "Unknown action", "error": True}

@@ -1,8 +1,8 @@
 from flask import Flask, request, jsonify
 
 from helpers import logger
-from main.mtk.mtk_utility2 import authenticate_request, setup_pppoe_server_with_radius, add_client, remove_client, create_profile,setup_radius_client,setup_hotspot_server_with_radius, get_active_clients, get_client_usage,get_dhcp_leases,get_interface_statistics,get_router_resource_usage, connect_to_router, customize_hotspot_login_page,generate_hotspot_vouchers,add_walled_garden_site, remove_walled_garden_site, list_walled_garden_sites, disconnect_hotspot_user, get_hotspot_usage_report, MTK,remove_profile
-
+from main.mtk.mtk_utility2 import authenticate_request,get_all_clients,get_all_packages, setup_pppoe_server_with_radius, add_client, remove_client, create_profile,setup_radius_client,setup_hotspot_server_with_radius, get_active_clients, get_client_usage,get_dhcp_leases,get_interface_statistics,get_router_resource_usage, connect_to_router, customize_hotspot_login_page,generate_hotspot_vouchers,add_walled_garden_site, remove_walled_garden_site, list_walled_garden_sites, disconnect_hotspot_user, get_hotspot_usage_report, MTK,remove_profile
+get_all_clients
 def init_mtk(app: Flask):
     @app.route("/mtk/console", methods=["POST"])
     def mikrotik_command():
@@ -32,7 +32,8 @@ def init_mtk(app: Flask):
 
             # Dispatch to the appropriate handler based on the action
             action = data["action"]
-            params = data["params"]
+            params = data.get("params", None)
+
 
             # Core router actions that require direct API access
             if action == "setup_radius_client":
@@ -81,6 +82,13 @@ def init_mtk(app: Flask):
                 result = get_client_usage(params)
             elif action == "generate_hotspot_vouchers":
                 result = generate_hotspot_vouchers(params)
+            elif action == "get_all_clients":
+                result = get_all_clients()
+            elif action == "get_all_packages":
+                result = get_all_packages()
+            elif action == "get_all_clients_by_profile":
+                result = get_all_clients({"profile": "basic_package"})
+
             else:
                 return jsonify({"success": False, "error": f"Unknown action: {action}"}), 400
 

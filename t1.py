@@ -142,3 +142,11 @@ if __name__ == "__main__":
     send_request("disconnect_hotspot_user", {
         "username": "testuser"
     })
+
+    send_request("get_all_clients_by_profile", 
+        {"profile": "basic_package"   })
+
+
+    send_request("get_all_packages")
+
+    send_request("get_all_clients")
