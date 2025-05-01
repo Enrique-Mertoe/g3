@@ -252,7 +252,7 @@ class MTK:
     conn: None | routeros_api.RouterOsApiPool = None
     server_id: str
 
-    def _init_(self, data):
+    def __init__(self, data):
         self.data = data
         self.api = connect_to_router(data["router"])
         MTK.server_id = data["server_id"]
