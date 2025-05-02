@@ -5,7 +5,7 @@ from main.mtk.mtk_utility import authenticate_request, setup_pppoe_server, add_c
     setup_hotspot_server, get_active_clients, get_client_usage, connect_to_router, customize_hotspot_login_page, \
     add_hotspot_user, generate_hotspot_vouchers, list_hotspot_users, remove_hotspot_user, create_hotspot_profile, \
     list_hotspot_profiles, add_walled_garden_site, remove_walled_garden_site, list_walled_garden_sites, \
-    get_active_hotspot_users, disconnect_hotspot_user, get_hotspot_usage_report, MTK,remove_profile
+    get_active_hotspot_users, disconnect_hotspot_user, get_hotspot_usage_report, MTK, remove_profile
 
 
 def init_mtk(app: Flask):
