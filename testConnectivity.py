@@ -1,6 +1,5 @@
 import socket
 import subprocess
-
 def test_router_connectivity(host, port=8728):
     """Test if the router is reachable and the API port is open"""
     try:
@@ -41,4 +40,4 @@ def test_router_connectivity(host, port=8728):
         return False
 
 # Example usage
-test_router_connectivity("10.8.0.36")
+test_router_connectivity("10.8.0.41")

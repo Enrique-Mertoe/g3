@@ -609,6 +609,7 @@ def setup_hotspot_server_with_radius(router_api, params, mtk):
         return {"message": f"Hotspot server with RADIUS authentication set up successfully on {bridge_name}", "error": False}
     except Exception as e:
         return {"message": f"Failed to set up Hotspot server: {str(e)}", "error": True}
+
 def add_client(params):
     """Add a new client to the RADIUS database"""
     try:

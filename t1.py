@@ -12,9 +12,9 @@ HEADERS = {
 COMMON_DATA = {
     "api_key": "test-api-key",  # must match what authenticate_request expects
     "router": {
-        "host": "10.8.0.36",  # or your OpenVPN-assigned router IP
+        "host": "10.8.0.41",  # or your OpenVPN-assigned router IP
         "username": "lom_tech_user",
-        "password": "BYPnCVOC7HNPPa8f"
+        "password": "RlXyYwZUv1AQodET"
     }
 }
 
@@ -120,7 +120,7 @@ if __name__ == "__main__":
 
     # Setup RADIUS client on the router
     send_request("setup_radius_client", {
-        "radius_server_ip": "192.168.88.2",  # IP of your RADIUS server
+        "radius_server_ip": "10.8.0.1",  # IP of your RADIUS server
         "radius_secret": "mysecretkey",  # Shared secret between RADIUS and router
         "service": "pppoe"  # Service type: 'pppoe', 'hotspot', or both
     })
